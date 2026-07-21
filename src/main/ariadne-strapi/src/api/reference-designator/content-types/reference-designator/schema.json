@@ -1,0 +1,35 @@
+{
+  "kind": "collectionType",
+  "collectionName": "reference_designators",
+  "info": {
+    "singularName": "reference-designator",
+    "pluralName": "reference-designators",
+    "displayName": "ReferenceDesignator",
+    "description": "Designator codes (R, C, U, etc.)"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "designatorCode": {
+      "type": "uid",
+      "targetField": "name",
+      "required": true
+    },
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "string",
+      "required": false
+    },
+    "eecCategory": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::eec-category.eec-category",
+      "inversedBy": "referenceDesignators"
+    }
+  }
+}

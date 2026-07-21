@@ -1,0 +1,37 @@
+{
+  "kind": "collectionType",
+  "collectionName": "materials",
+  "info": {
+    "singularName": "material",
+    "pluralName": "materials",
+    "displayName": "Material",
+    "description": "Chemical material reference data"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "materialName": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "casrn": {
+      "type": "string",
+      "required": false,
+      "unique": true
+    },
+    "category": {
+      "type": "enumeration",
+      "enum": ["element", "compound"],
+      "required": true
+    },
+    "componentMaterials": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::component-material.component-material",
+      "mappedBy": "material"
+    }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "kind": "collectionType",
+  "collectionName": "devices",
+  "info": {
+    "singularName": "device",
+    "pluralName": "devices",
+    "displayName": "Device",
+    "description": "Electronic device / board"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "brand": {
+      "type": "string",
+      "required": true,
+      "minLength": 1
+    },
+    "modelName": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "manufacturer": {
+      "type": "string",
+      "required": true
+    },
+    "yearOfProduction": {
+      "type": "integer",
+      "required": true,
+      "min": 1900,
+      "max": 2030
+    },
+    "notes": {
+      "type": "richtext",
+      "required": false
+    },
+    "bomEntries": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::bom-entry.bom-entry",
+      "mappedBy": "device"
+    },
+    "auditLogs": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::audit-log.audit-log",
+      "mappedBy": "device"
+    }
+  }
+}

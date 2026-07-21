@@ -1,0 +1,41 @@
+{
+  "kind": "collectionType",
+  "collectionName": "component_materials",
+  "info": {
+    "singularName": "component-material",
+    "pluralName": "component-materials",
+    "displayName": "ComponentMaterial",
+    "description": "Material composition of a BOM entry"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "massMg": {
+      "type": "decimal",
+      "required": true,
+      "min": 0
+    },
+    "note": {
+      "type": "string",
+      "required": false
+    },
+    "sourceMdf": {
+      "type": "string",
+      "required": false
+    },
+    "bomEntry": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::bom-entry.bom-entry",
+      "inversedBy": "componentMaterials"
+    },
+    "material": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::material.material",
+      "inversedBy": "componentMaterials"
+    }
+  }
+}

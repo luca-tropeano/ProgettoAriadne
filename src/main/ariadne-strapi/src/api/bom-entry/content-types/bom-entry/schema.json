@@ -1,0 +1,96 @@
+{
+  "kind": "collectionType",
+  "collectionName": "bom_entries",
+  "info": {
+    "singularName": "bom-entry",
+    "pluralName": "bom-entries",
+    "displayName": "BOMEntry",
+    "description": "Bill of Materials entry"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "itemNumber": {
+      "type": "integer",
+      "required": true
+    },
+    "quantity": {
+      "type": "integer",
+      "required": true,
+      "min": 1
+    },
+    "referenceDesignator": {
+      "type": "string",
+      "required": true
+    },
+    "mountingType": {
+      "type": "enumeration",
+      "enum": ["SMT", "THT"],
+      "required": true
+    },
+    "partValue": {
+      "type": "string",
+      "required": false
+    },
+    "manufacturer": {
+      "type": "string",
+      "required": false
+    },
+    "manufacturerOrderCode": {
+      "type": "string",
+      "required": false
+    },
+    "supplier1": {
+      "type": "string",
+      "required": false
+    },
+    "supplier1OrderCode": {
+      "type": "string",
+      "required": false
+    },
+    "supplier2": {
+      "type": "string",
+      "required": false
+    },
+    "supplier2OrderCode": {
+      "type": "string",
+      "required": false
+    },
+    "supplier3": {
+      "type": "string",
+      "required": false
+    },
+    "supplier3OrderCode": {
+      "type": "string",
+      "required": false
+    },
+    "designatorCode": {
+      "type": "string",
+      "required": false
+    },
+    "notes": {
+      "type": "richtext",
+      "required": false
+    },
+    "device": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::device.device",
+      "inversedBy": "bomEntries"
+    },
+    "eecCategory": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::eec-category.eec-category",
+      "inversedBy": "bomEntries"
+    },
+    "componentMaterials": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::component-material.component-material",
+      "mappedBy": "bomEntry"
+    }
+  }
+}

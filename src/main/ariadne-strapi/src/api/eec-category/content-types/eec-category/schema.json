@@ -1,0 +1,43 @@
+{
+  "kind": "collectionType",
+  "collectionName": "eec_categories",
+  "info": {
+    "singularName": "eec-category",
+    "pluralName": "eec-categories",
+    "displayName": "EEC_Category",
+    "description": "EEC commodity categories (1-16)"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "categoryId": {
+      "type": "integer",
+      "required": true,
+      "unique": true,
+      "min": 1,
+      "max": 16
+    },
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "subcategories": {
+      "type": "json",
+      "required": false
+    },
+    "referenceDesignators": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::reference-designator.reference-designator",
+      "mappedBy": "eecCategory"
+    },
+    "bomEntries": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::bom-entry.bom-entry",
+      "mappedBy": "eecCategory"
+    }
+  }
+}
