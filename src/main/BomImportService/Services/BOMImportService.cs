@@ -96,4 +96,49 @@ public class BOMImportService
             return "THT";
         return "SMT";
     }
+
+    public async Task<BomImportResult> ImportBomFromEntriesAsync(
+        List<BOMEntryDto> entries,
+        int deviceId,
+        string userId)
+    {
+        var result = new BomImportResult();
+
+        foreach (var entry in entries)
+        {
+            try
+            {
+                entry.DesignatorCode ??=
+                    _designatorValidator.GetDesignatorCode(entry.ReferenceDesignator);
+
+                entry.EECCategoryId =
+                    await _eecClassifier.GetCategoryIdAsync(entry.DesignatorCode);
+
+                await _strapiClient.PostAsync<BOMEntryDto>(
+                    "/api/bom-entries",
+                    new { data = entry });
+
+                result.ImportedRows++;
+            }
+            catch (Exception ex)
+            {
+                result.FailedRows++;
+                result.Errors.Add($"Componente {entry.ReferenceDesignator}: {ex.Message}");
+            }
+        }
+
+        await _strapiClient.PostAsync<object>("/api/audit-logs", new
+        {
+            data = new
+            {
+                timestamp = DateTime.UtcNow,
+                userId,
+                action = "BOM_IMPORT_PDF",
+                details = $"{result.ImportedRows} componenti importati da PDF via Claude",
+                device = deviceId
+            }
+        });
+
+        return result;
+    }
 }
