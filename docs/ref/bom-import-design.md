@@ -1,14 +1,106 @@
 # BOM Import Service — Specifica Tecnica
 
+**VERSIONE: 1.4** | **Data:** 22/07/2026 | **Autore:** Tropeano Luca
+
 ## Panoramica
 
-Servizio .NET/C# per importare file BOM Excel e scrivere i dati su Strapi tramite API REST.
+Servizio .NET/C# (CLI) per importare file BOM da Excel (.xlsx) e da PDF (via Claude AI), scrivendo i dati su Strapi tramite API REST.
 
-## Struttura a Classi
+**Flussi supportati:**
+- **Excel (.xlsx)** → EPPlus parser → Strapi API → PostgreSQL
+- **PDF (.pdf)** → PdfPig text extraction → Claude AI API → JSON → Strapi API → PostgreSQL
 
-### BOMImportService.cs
+## Struttura del Progetto
 
-Punto di ingresso dell'import.
+```
+BomImportService/
+├── Program.cs                          # CLI entry point (auto-detect .pdf/.xlsx)
+├── appsettings.json                    # Configurazione Strapi + Claude
+├── BomImportService.csproj             # .NET 10, EPPlus, PdfPig, Hosting
+├── Models/
+│   ├── BOMEntryDto.cs                  # DTO riga BOM
+│   ├── BomImportResult.cs              # Risultato import
+│   ├── ClaudeConfig.cs                 # Config Claude API
+│   ├── DeviceDto.cs                    # DTO dispositivo (brand, model, manufacturer, year)
+│   ├── StrapiConfig.cs                 # Config Strapi
+│   ├── ApiResponse.cs                  # Wrapper risposta Strapi
+│   └── ReferenceDesignatorDto.cs       # DTO reference designator
+├── Interfaces/
+│   ├── IStrapiClient.cs               # Client HTTP Strapi
+│   ├── IDesignatorValidator.cs        # Validatore designator
+│   ├── IEECClassifier.cs             # Classificatore EEC
+│   ├── IPdfExtractor.cs              # Estrattore testo PDF
+│   └── IClaudeClient.cs              # Client API Claude
+├── Services/
+│   ├── StrapiClient.cs                # Implementazione HTTP Strapi
+│   ├── DesignatorValidator.cs         # Mapping lettera → codice designator
+│   ├── EECClassifier.cs              # Classificazione EEC da Strapi
+│   ├── BOMImportService.cs           # Logica import Excel + entry list
+│   ├── PdfExtractor.cs               # Estrazione testo da PDF (PdfPig)
+│   └── ClaudeClient.cs               # Client API Claude (Anthropic)
+└── Tests/
+    └── BomImportService.Tests/        # Progetto xUnit (62 test)
+        ├── DesignatorValidatorTests.cs
+        ├── PdfExtractorTests.cs
+        ├── BomEntryParsingTests.cs
+        ├── ClaudeClientTests.cs
+        └── ExcelParsingTests.cs
+```
+
+## Program.cs — CLI Entry Point
+
+Auto-rileva il formato file (.pdf o .xlsx) e invoca il flusso appropriato. Supporta flag CLI per la creazione automatica dispositivi.
+
+```csharp
+var flags = ParseFlags(args);
+var filePath = flags.TryGetValue("--file", out var fp) ? fp : args.FirstOrDefault(a => !a.StartsWith("--"));
+
+// Device auto-creation from CLI flags
+DeviceDto? deviceInfo = null;
+if (flags.ContainsKey("--brand") || flags.ContainsKey("--model"))
+{
+    deviceInfo = new DeviceDto
+    {
+        Brand = flags.GetValueOrDefault("--brand", ""),
+        ModelName = flags.GetValueOrDefault("--model", ""),
+        Manufacturer = flags.GetValueOrDefault("--manufacturer", flags.GetValueOrDefault("--brand", "")),
+        YearOfProduction = int.TryParse(flags.GetValueOrDefault("--year", ""), out var yr) ? yr : DateTime.Now.Year
+    };
+}
+
+string? deviceDocId = null;
+if (deviceInfo != null && !string.IsNullOrEmpty(deviceInfo.ModelName))
+    deviceDocId = await importService.FindOrCreateDeviceAsync(deviceInfo);
+
+switch (ext)
+{
+    case ".xlsx":
+    case ".xls":
+        await using (var stream = File.OpenRead(filePath))
+        {
+            var excelResult = await importService.ImportBomAsync(stream, deviceDocId, "cli");
+            PrintResult(excelResult);
+        }
+        break;
+
+    case ".pdf":
+        var rawText = pdfExtractor.ExtractText(filePath);
+        var claudeResponse = await claudeClient.SendMessageAsync(rawText, systemPrompt);
+        var entries = ParseClaudeResponse(claudeResponse);
+        var pdfResult = await importService.ImportBomFromEntriesAsync(entries, deviceDocId, "cli");
+        PrintResult(pdfResult);
+        break;
+}
+```
+
+**Uso:**
+```
+BomImportService <file> [--brand X] [--model X] [--manufacturer X] [--year N]
+```
+
+## BOMImportService.cs
+
+Punto di ingresso dell'import. Supporta due metodi:
 
 ```csharp
 public class BOMImportService
@@ -17,100 +109,108 @@ public class BOMImportService
     private readonly IDesignatorValidator _designatorValidator;
     private readonly IEECClassifier _eecClassifier;
 
-    public BOMImportService(
-        IStrapiClient strapiClient,
-        IDesignatorValidator designatorValidator,
-        IEECClassifier eecClassifier)
-    {
-        _strapiClient = strapiClient;
-        _designatorValidator = designatorValidator;
-        _eecClassifier = eecClassifier;
-    }
+    // Verifica se il dispositivo esiste, lo crea se non esiste → restituisce documentId
+    public async Task<string?> FindOrCreateDeviceAsync(DeviceDto device);
 
+    // Flusso Excel: stream → EPPlus → parsing righe → Strapi API
     public async Task<BomImportResult> ImportBomAsync(
-        Stream excelStream,
-        int deviceId,
-        string userId)
+        Stream excelStream, string? deviceDocumentId, string userId);
+
+    // Flusso PDF: lista entries da Claude → validazione → Strapi API
+    public async Task<BomImportResult> ImportBomFromEntriesAsync(
+        List<BOMEntryDto> entries, string? deviceDocumentId, string userId);
+}
+```
+
+**Logica condivisa (entrambi i flussi):**
+1. Per ogni entry: `DesignatorValidator.GetDesignatorCode()` → codice designator
+2. `EECClassifier.GetCategoryIdAsync()` → categoria EEC da Strapi
+3. Costruzione payload con `{ data = { ...entry, device = { documentId = ... } } }` (Strapi v5 relations)
+4. `StrapiClient.PostAsync("/api/bom-entry", payload)` → salvataggio
+5. Audit log → `POST /api/audit-log` (con device relation via documentId)
+
+### Rilevamento MountingType (SMT/THT)
+
+```csharp
+private static string DetectMountingType(string package)
+{
+    var upper = package.Trim().ToUpperInvariant();
+    if (upper.StartsWith("DIP") || upper.StartsWith("SIP") || upper.StartsWith("TO-"))
+        return "THT";
+    return "SMT";
+}
+```
+
+## PdfExtractor.cs
+
+Estrae testo da PDF tramite PdfPig (OpenSource, nessuna dipendenza esterna).
+
+```csharp
+public class PdfExtractor : IPdfExtractor
+{
+    public string ExtractText(string pdfPath) { ... }
+    public string ExtractText(Stream pdfStream)
     {
-        var result = new BomImportResult();
-
-        using var package = new ExcelPackage(excelStream);
-        var worksheet = package.Workbook.Worksheets[0];
-        int rowCount = worksheet.Dimension.Rows;
-
-        // Salta header (riga 1)
-        for (int row = 2; row <= rowCount; row++)
+        using var document = PdfDocument.Open(pdfStream);
+        var sb = new StringBuilder();
+        foreach (var page in document.GetPages())
         {
-            try
-            {
-                var entry = ParseRow(worksheet, row);
-                if (entry == null) continue;
-
-                // Determina designator code
-                entry.DesignatorCode =
-                    _designatorValidator.GetDesignatorCode(entry.ReferenceDesignator);
-
-                // Ottieni EEC category
-                entry.EECCategoryId =
-                    await _eecClassifier.GetCategoryIdAsync(entry.DesignatorCode);
-
-                // Invia a Strapi
-                var response = await _strapiClient.PostAsync<BOMEntryDto>(
-                    "/api/bom-entries",
-                    new { data = entry });
-
-                result.ImportedRows++;
-            }
-            catch (Exception ex)
-            {
-                result.FailedRows++;
-                result.Errors.Add($"Riga {row}: {ex.Message}");
-            }
+            sb.AppendLine($"--- Page {page.Number} ---");
+            sb.AppendLine(page.Text);
         }
-
-        // Log operazione
-        await _strapiClient.PostAsync("/api/audit-logs", new
-        {
-            data = new
-            {
-                timestamp = DateTime.UtcNow,
-                userId,
-                action = "BOM_IMPORT",
-                details = $"{result.ImportedRows} componenti importati",
-                device = deviceId
-            }
-        });
-
-        return result;
-    }
-
-    private BOMEntryDto? ParseRow(ExcelWorksheet ws, int row)
-    {
-        string? reference = ws.Cells[row, 3].Text;
-        if (string.IsNullOrWhiteSpace(reference)) return null;
-
-        return new BOMEntryDto
-        {
-            ItemNumber = int.Parse(ws.Cells[row, 1].Text),
-            Quantity = int.Parse(ws.Cells[row, 2].Text),
-            ReferenceDesignator = reference,
-            PartValue = ws.Cells[row, 4].Text,
-            Manufacturer = ws.Cells[row, 6].Text,
-            MountingType = DetectMountingType(ws.Cells[row, 5].Text),
-            Device = ws.Cells[row, 0].Text // da passare al chiamante
-        };
-    }
-
-    private string DetectMountingType(string package)
-    {
-        // Package SMT: 0603, 0805, SOD123, SOT23, QFP, QFN...
-        // Package THT: DIP, SIP, TO-220...
-        return package.StartsWithAny("DIP", "SIP", "TO-") ? "THT" : "SMT";
+        return sb.ToString();
     }
 }
 ```
 
-### DTOs
+**Note:**
+- Funziona solo con PDF testuali (non scansionati/immagini)
+- Per PDF scannerizzati è necessario un passaggio OCR (fase futura)
+
+## ClaudeClient.cs
+
+Client HTTP per l'API Claude (Anthropic). Utilizzato per estrarre dati BOM da testo PDF non strutturato.
+
+```csharp
+public class ClaudeClient : IClaudeClient
+{
+    private readonly HttpClient _httpClient;
+    private readonly ClaudeConfig _config;
+
+    public ClaudeClient(ClaudeConfig config)
+    {
+        _httpClient = new HttpClient { BaseAddress = new Uri(config.BaseUrl) };
+        _httpClient.DefaultRequestHeaders.Add("x-api-key", config.ApiKey);
+        _httpClient.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
+    }
+
+    public async Task<string> SendMessageAsync(string userMessage, string? systemPrompt = null);
+}
+```
+
+**System Prompt predefinito (Program.cs):**
+```
+You are a BOM (Bill of Materials) extraction assistant.
+Extract component data from the provided text and return ONLY a JSON array.
+Each object must have: itemNumber, quantity, referenceDesignator, partValue,
+manufacturer, manufacturerOrderCode, mountingType ("SMT"/"THT").
+Rules: default SMT if unknown, return ONLY JSON array, null for unknown fields.
+```
+
+### ClaudeConfig (appsettings.json)
+
+```json
+{
+  "Claude": {
+    "ApiKey": "<your-anthropic-api-key>",
+    "Model": "claude-sonnet-4-20250514",
+    "BaseUrl": "https://api.anthropic.com",
+    "MaxTokens": 4096
+  }
+}
+```
+
+## DTOs
 
 ```csharp
 public class BOMEntryDto
@@ -143,160 +243,126 @@ public class BomImportResult
     public List<string> Warnings { get; set; } = new();
     public List<string> Errors { get; set; } = new();
 }
-```
 
-### IStrapiClient.cs
-
-```csharp
-public interface IStrapiClient
+public class ClaudeConfig
 {
-    Task<ApiResponse<T>> GetAsync<T>(string endpoint, object? filters = null);
-    Task<ApiResponse<T>> PostAsync<T>(string endpoint, object data);
-    Task<ApiResponse<T>> PutAsync<T>(string endpoint, int id, object data);
-    Task<bool> DeleteAsync(string endpoint, int id);
+    public string ApiKey { get; set; } = string.Empty;
+    public string Model { get; set; } = "claude-sonnet-4-20250514";
+    public string BaseUrl { get; set; } = "https://api.anthropic.com";
+    public int MaxTokens { get; set; } = 4096;
 }
 
-public class StrapiClient : IStrapiClient
+public class DeviceDto
 {
-    private readonly HttpClient _httpClient;
-
-    public StrapiClient(string baseUrl, string apiToken)
-    {
-        _httpClient = new HttpClient
-        {
-            BaseAddress = new Uri(baseUrl)
-        };
-        _httpClient.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", apiToken);
-    }
-
-    public async Task<ApiResponse<T>> GetAsync<T>(string endpoint, object? filters = null)
-    {
-        var queryString = filters?.ToQueryString() ?? "";
-        var response = await _httpClient.GetAsync($"{endpoint}{queryString}");
-        var content = await response.Content.ReadAsStringAsync();
-        return JsonSerializer.Deserialize<ApiResponse<T>>(content);
-    }
-
-    public async Task<ApiResponse<T>> PostAsync<T>(string endpoint, object data)
-    {
-        var json = JsonSerializer.Serialize(data);
-        var httpContent = new StringContent(json, Encoding.UTF8, "application/json");
-        var response = await _httpClient.PostAsync(endpoint, httpContent);
-        var content = await response.Content.ReadAsStringAsync();
-        return JsonSerializer.Deserialize<ApiResponse<T>>(content);
-    }
-
-    // PUT, DELETE analoghi...
-}
-
-public class ApiResponse<T>
-{
-    public T Data { get; set; }
-    public Error? Error { get; set; }
+    public string Brand { get; set; } = string.Empty;
+    public string ModelName { get; set; } = string.Empty;
+    public string Manufacturer { get; set; } = string.Empty;
+    public int YearOfProduction { get; set; }
+    public string? Notes { get; set; }
 }
 ```
 
-### IDesignatorValidator.cs
+## EECClassifier
+
+Mappa designator → categoria EEC tramite query Strapi:
 
 ```csharp
-public interface IDesignatorValidator
-{
-    string GetDesignatorCode(string referenceDesignator);
-}
-
-public class DesignatorValidator : IDesignatorValidator
-{
-    private static readonly Dictionary<char, string> PrefixMap = new()
-    {
-        { 'R', "R" }, { 'C', "C" }, { 'L', "L" }, { 'D', "D" },
-        { 'Q', "Q" }, { 'U', "U" }, { 'J', "J" }, { 'P', "P" },
-        { 'X', "X" }, { 'Y', "Y" }, { 'S', "SW" },
-        { 'F', "F" }, { 'T', "T" }, { 'K', "K" }, { 'M', "M" },
-        { 'B', "B" }, { 'Z', "Z" }, { 'A', "ANT" }, { 'H', "H" },
-    };
-
-    public string GetDesignatorCode(string reference)
-    {
-        if (string.IsNullOrWhiteSpace(reference))
-            return "UNKNOWN";
-
-        // Estrai prefisso letterale (es. "C1,C5" -> "C", "SW1" -> "SW")
-        var first = reference.Trim().ToUpper()[0];
-
-        if (PrefixMap.TryGetValue(first, out var code))
-            return code;
-
-        // Gestisci multi-carattere (SW, TVS, TH, REG, PS...)
-        var prefix = reference.Trim().ToUpper();
-        foreach (var kvp in PrefixMap.Where(k => k.Value.Length > 1)
-                     .OrderByDescending(k => k.Value.Length))
-        {
-            if (prefix.StartsWith(kvp.Value))
-                return kvp.Value;
-        }
-
-        return "UNKNOWN";
-    }
-}
-```
-
-### IEECClassifier.cs
-
-```csharp
-public interface IEECClassifier
-{
-    Task<int> GetCategoryIdAsync(string designatorCode);
-}
-
 public class EECClassifier : IEECClassifier
 {
-    private readonly IStrapiClient _strapiClient;
-
-    public EECClassifier(IStrapiClient strapiClient)
-    {
-        _strapiClient = strapiClient;
-    }
-
     public async Task<int> GetCategoryIdAsync(string designatorCode)
     {
-        var response = await _strapiClient.GetAsync<ReferenceDesignatorDto>(
-            "/api/reference-designators",
-            new { filters = new { designatorCode = new { $eq = designatorCode } } });
-
-        return response.Data?.EECCategoryId ?? 12; // default Resistors
+        var url = $"/api/reference-designator?populate=eecCategory&filters[designatorCode][$eq]={Uri.EscapeDataString(designatorCode)}";
+        var response = await _strapiClient.GetAsync<List<ReferenceDesignatorDto>>(url);
+        return response.Data?.FirstOrDefault()?.EECCategoryId ?? 10;
     }
 }
 ```
 
-## Diagramma di Sequenza
+**Note:**
+- Usa query string diretta `filters[designatorCode][$eq]=X` (non serializzazione oggetti annidati)
+- `populate=eecCategory` per includere la relazione nella risposta
+- Default: categoria 10 (Resistors) se non trovata
+
+## DesignatorValidator
+
+Mapping lettera iniziale → codice designator (IEEE/ANSI):
+
+```csharp
+private static readonly Dictionary<char, string> PrefixMap = new()
+{
+    { 'R', "R" }, { 'C', "C" }, { 'L', "L" }, { 'D', "D" },
+    { 'Q', "Q" }, { 'U', "U" }, { 'J', "J" }, { 'P', "P" },
+    { 'X', "X" }, { 'Y', "Y" }, { 'S', "SW" },
+    { 'F', "F" }, { 'T', "T" }, { 'K', "K" }, { 'M', "M" },
+    { 'B', "B" }, { 'Z', "Z" }, { 'A', "ANT" }, { 'H', "H" },
+};
+```
+
+## Diagramma di Sequenza — Flusso Excel
 
 ```
-Utente               BOMImportService          EPPlus            StrapiClient        Strapi API
-  │                        │                     │                   │                  │
-  │──Upload BOM.xlsx──────▶│                     │                   │                  │
-  │                        │──Read worksheet────▶│                   │                  │
-  │                        │◀─────rows───────────│                   │                  │
-  │                        │                                              │
-  │                        │──(per ogni riga)──────────────────────────────────────────▶│
-  │                        │                              │                              │
-  │                        │──GetDesignatorCode────┐       │                              │
-  │                        │◀─────────────────────│       │                              │
-  │                        │                              │                              │
-  │                        │──GetCategoryIdAsync─────────────────────▶│──GET /api/ref-──▶│
-  │                        │◀─────────────────────────────────────────│◀─────response────│
-  │                        │                              │                              │
-  │                        │──PostAsync(BOMEntry)──────────────────────▶│──POST /api/───▶│
-  │                        │◀──────────────────────────────────────────│◀─────response──│
-  │                        │                              │                              │
-  │◀──────risultato────────│                              │                              │
+Utente               Program.cs          BOMImportService     EPPlus      StrapiClient    Strapi API
+  │                      │                      │                │              │              │
+  │──xlsx path──────────▶│                      │                │              │              │
+  │                      │──ImportBomAsync()───▶│                │              │              │
+  │                      │                      │──Read worksheet▶              │              │
+  │                      │                      │◀────rows───────│              │              │
+  │                      │                      │                               │              │
+  │                      │                      │──GetDesignatorCode()          │              │
+  │                      │                      │──GetCategoryIdAsync()──────────────────────▶│
+  │                      │                      │◀─────────────────────────────────────────────│
+  │                      │                      │                               │              │
+  │                      │                      │──PostAsync(/api/bom-entry)──────────────▶│
+  │                      │                      │◀─────────────────────────────────────────────│
+  │                      │◀──BomImportResult────│                               │              │
 ```
+
+## Diagramma di Sequenza — Flusso PDF → Claude
+
+```
+Utente               Program.cs     PdfExtractor   ClaudeClient    BOMImportService    Strapi API
+  │                      │               │              │                 │                │
+  │──pdf path───────────▶│               │              │                 │                │
+  │                      │──ExtractText()▶              │                 │                │
+  │                      │◀──raw text────│              │                 │                │
+  │                      │                              │                 │                │
+  │                      │──SendMessageAsync(rawText)──▶│                 │                │
+  │                      │◀──JSON response─────────────│                 │                │
+  │                      │                              │                 │                │
+  │                      │──ParseClaudeResponse()───────│                 │                │
+  │                      │                              │                 │                │
+  │                      │──ImportBomFromEntriesAsync(entries)──────────▶│                │
+  │                      │                              │                 │──POST─────────▶│
+  │                      │◀──BomImportResult────────────────────────────│                │
+```
+
+## Excel Column Mapping (17-colonne)
+
+La BOM Excel reale (`Scheda STM-Steval Spin3204 - Copia x Luca.xlsx`) ha **17 colonne** con intestazioni alla riga 6:
+
+| Col | Header | Campo Strapi | Metodo parsing |
+|-----|--------|-------------|----------------|
+| 1 | Item | itemNumber | `int.TryParse` — salta righe non numeriche |
+| 2 | Qty | quantity | `int.TryParse` |
+| 3 | Reference | referenceDesignator | Testo diretto |
+| 5 | Part/Value | partValue | Testo diretto |
+| 9 | Package | mountingType | `DetectMountingType()` — DIP/SIP/TO- → THT, altrimenti SMT |
+| 10 | Manufacturer | manufacturer | Testo diretto |
+| 11 | Mfr Order Code | manufacturerOrderCode | Testo diretto |
+| 12 | Notes | notes | Testo diretto |
+| 13 | Supplier | supplier1 | Testo diretto |
+| 14 | Supplier Code | supplier1OrderCode | Testo diretto |
+
+Colonne 4 (Description), 6 (Footprint), 7 (Qty Stock), 8 (Unit Price), 15-17 (extra supplier) non mappate.
 
 ## NuGet Dependencies
 
 ```xml
-<PackageReference Include="EPPlus" Version="7.0+" />
-<PackageReference Include="System.Text.Json" Version="8.0+" />
+<PackageReference Include="EPPlus" Version="7.6.1" />
+<PackageReference Include="PdfPig" Version="0.1.10" />
+<PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.0" />
+<PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
 ```
 
 ## Configurazione (appsettings.json)
@@ -305,7 +371,32 @@ Utente               BOMImportService          EPPlus            StrapiClient   
 {
   "Strapi": {
     "BaseUrl": "http://localhost:1337",
-    "ApiToken": "<your-api-token>"
+    "ApiToken": ""
+  },
+  "Claude": {
+    "ApiKey": "<your-anthropic-api-key>",
+    "Model": "claude-sonnet-4-20250514",
+    "BaseUrl": "https://api.anthropic.com",
+    "MaxTokens": 4096
   }
 }
+```
+
+**Note:** `ApiToken` è opzionale — se vuoto o inizia con `<`, lo StrapiClient si affida ai permessi CRUD del ruolo Public configurati dal bootstrap. `ApiKey` è obbligatorio per l'estrazione PDF→Claude.
+
+## Progetto Test (xUnit)
+
+Progetto `BomImportService.Tests` con **62 test** coprenti:
+
+| Classe Test | # Test | Cosa verifica |
+|------------|--------|---------------|
+| DesignatorValidatorTests | 10 | Mapping designator → codice (R, C, U, S→SW, multi-char) |
+| PdfExtractorTests | 4 | Estrazione testo da PDF, file non esistente, stream vs file |
+| BomEntryParsingTests | 9 | Parsing Excel rows, mounting type detection, validazione |
+| ClaudeClientTests | 7 | Serializzazione request, deserializzazione response, errori API |
+| ExcelParsingTests | 4 | Lettura Excel reale, parsing righe BOM, righe vuote |
+
+Esecuzione:
+```bash
+dotnet test src/tests/BomImportService.Tests/ --verbosity minimal
 ```

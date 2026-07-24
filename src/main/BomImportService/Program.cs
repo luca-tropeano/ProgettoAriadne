@@ -28,16 +28,47 @@ var importService = host.Services.GetRequiredService<BOMImportService>();
 var pdfExtractor = host.Services.GetRequiredService<IPdfExtractor>();
 var claudeClient = host.Services.GetRequiredService<IClaudeClient>();
 
-if (args.Length == 0)
+var flags = ParseFlags(args);
+
+if (flags.TryGetValue("--file", out var filePath) == false && args.Length > 0 && !args[0].StartsWith("--"))
 {
-    Console.WriteLine("Usage: BomImportService <path-to-file>");
+    filePath = args[0];
+}
+
+if (string.IsNullOrEmpty(filePath))
+{
+    Console.WriteLine("Usage: BomImportService <file> [--brand X] [--model X] [--manufacturer X] [--year N]");
     Console.WriteLine("  .xlsx  — import diretto da Excel");
     Console.WriteLine("  .pdf   — estrazione via Claude AI → Strapi");
+    Console.WriteLine();
+    Console.WriteLine("Options:");
+    Console.WriteLine("  --brand         Device brand (e.g. STMicroelectronics)");
+    Console.WriteLine("  --model         Device model (e.g. STEVAL-SPIN3204)");
+    Console.WriteLine("  --manufacturer  Device manufacturer");
+    Console.WriteLine("  --year          Year of production");
     return;
 }
 
-var filePath = args[0];
 var ext = Path.GetExtension(filePath).ToLowerInvariant();
+
+DeviceDto? deviceInfo = null;
+if (flags.ContainsKey("--brand") || flags.ContainsKey("--model"))
+{
+    deviceInfo = new DeviceDto
+    {
+        Brand = flags.GetValueOrDefault("--brand", ""),
+        ModelName = flags.GetValueOrDefault("--model", ""),
+        Manufacturer = flags.GetValueOrDefault("--manufacturer",
+            flags.GetValueOrDefault("--brand", "")),
+        YearOfProduction = int.TryParse(flags.GetValueOrDefault("--year", ""), out var yr) ? yr : DateTime.Now.Year
+    };
+}
+
+string? deviceDocId = null;
+if (deviceInfo != null && !string.IsNullOrEmpty(deviceInfo.ModelName))
+{
+    deviceDocId = await importService.FindOrCreateDeviceAsync(deviceInfo);
+}
 
 switch (ext)
 {
@@ -46,7 +77,7 @@ switch (ext)
         Console.WriteLine($"Import Excel: {filePath}");
         await using (var stream = File.OpenRead(filePath))
         {
-            var excelResult = await importService.ImportBomAsync(stream, deviceId: 1, userId: "cli");
+            var excelResult = await importService.ImportBomAsync(stream, deviceDocId, "cli");
             PrintResult(excelResult);
         }
         break;
@@ -91,7 +122,7 @@ switch (ext)
         Console.WriteLine($"Extracted {entries.Count} components from PDF.");
         Console.WriteLine("Importing to Strapi...");
 
-        var pdfResult = await importService.ImportBomFromEntriesAsync(entries, deviceId: 1, userId: "cli");
+        var pdfResult = await importService.ImportBomFromEntriesAsync(entries, deviceDocId, "cli");
         PrintResult(pdfResult);
         break;
 
@@ -101,11 +132,28 @@ switch (ext)
         break;
 }
 
+static Dictionary<string, string> ParseFlags(string[] args)
+{
+    var flags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    for (int i = 0; i < args.Length; i++)
+    {
+        if (args[i].StartsWith("--") && i + 1 < args.Length && !args[i + 1].StartsWith("--"))
+        {
+            flags[args[i].ToLowerInvariant()] = args[i + 1];
+            i++;
+        }
+        else if (!args[i].StartsWith("--"))
+        {
+            flags.TryAdd("--file", args[i]);
+        }
+    }
+    return flags;
+}
+
 static List<BOMEntryDto> ParseClaudeResponse(string response)
 {
     var json = response.Trim();
 
-    // Strip markdown code fences if present
     if (json.StartsWith("```"))
     {
         var firstNewline = json.IndexOf('\n');

@@ -54,5 +54,34 @@ export default {
         await strapi.entityService.create("api::reference-designator.reference-designator", { data: d });
       }
     }
+
+    // Grant full CRUD to Public role on all collection types
+    const publicRole = await strapi.db.query("plugin::users-permissions.role").findOne({ where: { type: "public" } });
+    if (publicRole) {
+      const apiTypes = [
+        "api::eec-category.eec-category",
+        "api::reference-designator.reference-designator",
+        "api::device.device",
+        "api::bom-entry.bom-entry",
+        "api::component-material.component-material",
+        "api::material.material",
+        "api::audit-log.audit-log",
+      ];
+      const actions = ["find", "findOne", "create", "update", "delete"];
+
+      for (const apiType of apiTypes) {
+        for (const action of actions) {
+          const existing = await strapi.db.query("plugin::users-permissions.permission").findOne({
+            where: { action: `${apiType}.${action}`, role: publicRole.id },
+          });
+          if (!existing) {
+            await strapi.db.query("plugin::users-permissions.permission").create({
+              data: { action: `${apiType}.${action}`, role: publicRole.id },
+            });
+          }
+        }
+      }
+      strapi.log.info("[bootstrap] Public role permissions configured for all API types");
+    }
   },
 };

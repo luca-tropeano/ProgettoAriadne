@@ -1,3 +1,4 @@
+using System.Text.Json;
 using BomImportService.Interfaces;
 using BomImportService.Models;
 using OfficeOpenXml;
@@ -20,9 +21,40 @@ public class BOMImportService
         _eecClassifier = eecClassifier;
     }
 
+    public async Task<string?> FindOrCreateDeviceAsync(DeviceDto device)
+    {
+        var response = await _strapiClient.GetAsync<List<JsonElement>>(
+            $"/api/device?filters[modelName][$eq]={Uri.EscapeDataString(device.ModelName)}");
+        var existing = response.Data;
+        if (existing != null && existing.Count > 0 && existing[0].ValueKind == JsonValueKind.Object
+            && existing[0].TryGetProperty("documentId", out var docId))
+        {
+            Console.WriteLine($"  Device found: {existing[0].GetProperty("modelName").GetString()} (id={existing[0].GetProperty("id").GetInt32()})");
+            return docId.GetString();
+        }
+
+        Console.WriteLine($"  Creating device: {device.Brand} {device.ModelName}...");
+        var result = await _strapiClient.PostAsync<JsonElement>("/api/device", new
+        {
+            data = new
+            {
+                device.Brand,
+                device.ModelName,
+                device.Manufacturer,
+                device.YearOfProduction,
+                device.Notes
+            }
+        });
+        var id = result.Data.ValueKind == JsonValueKind.Object
+            && result.Data.TryGetProperty("documentId", out var newDocId)
+            ? newDocId.GetString() : null;
+        Console.WriteLine($"  Device created: {device.ModelName} (docId={id})");
+        return id;
+    }
+
     public async Task<BomImportResult> ImportBomAsync(
         Stream excelStream,
-        int deviceId,
+        string? deviceDocumentId,
         string userId)
     {
         var result = new BomImportResult();
@@ -44,9 +76,32 @@ public class BOMImportService
                 entry.EECCategoryId =
                     await _eecClassifier.GetCategoryIdAsync(entry.DesignatorCode);
 
-                var response = await _strapiClient.PostAsync<BOMEntryDto>(
-                    "/api/bom-entries",
-                    new { data = entry });
+                var payload = new
+                {
+                    data = new
+                    {
+                        entry.ItemNumber,
+                        entry.Quantity,
+                        entry.ReferenceDesignator,
+                        entry.MountingType,
+                        entry.PartValue,
+                        entry.Manufacturer,
+                        entry.ManufacturerOrderCode,
+                        entry.Supplier1,
+                        entry.Supplier1OrderCode,
+                        entry.Supplier2,
+                        entry.Supplier2OrderCode,
+                        entry.Supplier3,
+                        entry.Supplier3OrderCode,
+                        entry.DesignatorCode,
+                        entry.Notes,
+                        device = deviceDocumentId != null ? new { documentId = deviceDocumentId } : null
+                    }
+                };
+
+                await _strapiClient.PostAsync<BOMEntryDto>(
+                    "/api/bom-entry",
+                    payload);
 
                 result.ImportedRows++;
             }
@@ -57,7 +112,7 @@ public class BOMImportService
             }
         }
 
-        await _strapiClient.PostAsync<object>("/api/audit-logs", new
+        await _strapiClient.PostAsync<object>("/api/audit-log", new
         {
             data = new
             {
@@ -65,7 +120,7 @@ public class BOMImportService
                 userId,
                 action = "BOM_IMPORT",
                 details = $"{result.ImportedRows} componenti importati",
-                device = deviceId
+                device = deviceDocumentId != null ? new { documentId = deviceDocumentId } : null
             }
         });
 
@@ -74,18 +129,28 @@ public class BOMImportService
 
     private static BOMEntryDto? ParseRow(ExcelWorksheet ws, int row)
     {
+        var itemText = ws.Cells[row, 1].Text;
+        if (string.IsNullOrWhiteSpace(itemText)) return null;
+        if (!int.TryParse(itemText, out var itemNumber)) return null;
+
+        var quantityText = ws.Cells[row, 2].Text;
+        if (!int.TryParse(quantityText, out var quantity)) return null;
+
         var reference = ws.Cells[row, 3].Text;
         if (string.IsNullOrWhiteSpace(reference)) return null;
 
         return new BOMEntryDto
         {
-            ItemNumber = int.Parse(ws.Cells[row, 1].Text),
-            Quantity = int.Parse(ws.Cells[row, 2].Text),
+            ItemNumber = itemNumber,
+            Quantity = quantity,
             ReferenceDesignator = reference,
-            PartValue = ws.Cells[row, 4].Text,
-            Manufacturer = ws.Cells[row, 6].Text,
-            MountingType = DetectMountingType(ws.Cells[row, 5].Text),
-            Device = 0 // da popolare dal chiamante
+            PartValue = ws.Cells[row, 5].Text,
+            Manufacturer = ws.Cells[row, 10].Text,
+            ManufacturerOrderCode = ws.Cells[row, 11].Text,
+            Supplier1 = ws.Cells[row, 13].Text,
+            Supplier1OrderCode = ws.Cells[row, 14].Text,
+            Notes = ws.Cells[row, 12].Text,
+            MountingType = DetectMountingType(ws.Cells[row, 9].Text),
         };
     }
 
@@ -99,7 +164,7 @@ public class BOMImportService
 
     public async Task<BomImportResult> ImportBomFromEntriesAsync(
         List<BOMEntryDto> entries,
-        int deviceId,
+        string? deviceDocumentId,
         string userId)
     {
         var result = new BomImportResult();
@@ -114,9 +179,32 @@ public class BOMImportService
                 entry.EECCategoryId =
                     await _eecClassifier.GetCategoryIdAsync(entry.DesignatorCode);
 
+                var payload = new
+                {
+                    data = new
+                    {
+                        entry.ItemNumber,
+                        entry.Quantity,
+                        entry.ReferenceDesignator,
+                        entry.MountingType,
+                        entry.PartValue,
+                        entry.Manufacturer,
+                        entry.ManufacturerOrderCode,
+                        entry.Supplier1,
+                        entry.Supplier1OrderCode,
+                        entry.Supplier2,
+                        entry.Supplier2OrderCode,
+                        entry.Supplier3,
+                        entry.Supplier3OrderCode,
+                        entry.DesignatorCode,
+                        entry.Notes,
+                        device = deviceDocumentId != null ? new { documentId = deviceDocumentId } : null
+                    }
+                };
+
                 await _strapiClient.PostAsync<BOMEntryDto>(
-                    "/api/bom-entries",
-                    new { data = entry });
+                    "/api/bom-entry",
+                    payload);
 
                 result.ImportedRows++;
             }
@@ -127,7 +215,7 @@ public class BOMImportService
             }
         }
 
-        await _strapiClient.PostAsync<object>("/api/audit-logs", new
+        await _strapiClient.PostAsync<object>("/api/audit-log", new
         {
             data = new
             {
@@ -135,7 +223,7 @@ public class BOMImportService
                 userId,
                 action = "BOM_IMPORT_PDF",
                 details = $"{result.ImportedRows} componenti importati da PDF via Claude",
-                device = deviceId
+                device = deviceDocumentId != null ? new { documentId = deviceDocumentId } : null
             }
         });
 

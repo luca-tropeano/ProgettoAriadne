@@ -2,7 +2,7 @@
 
 ##### DIBRIS – University of Genoa. Polytechnic School, Software Engineering Course 80154
 
-**VERSION : 1.3**
+**VERSION : 1.4**
 
 **Authors**
 Tropeano Luca
@@ -15,6 +15,7 @@ Tropeano Luca
 | 1.1     | 28/06/2026 | Tropeano | Revision after Rosario's feedback — scope focused on C1 components only            |
 | 1.2     | 02/07/2026 | Tropeano | Rosario feedback revision v2: C1 defined, SMT/THT, RoHS, predictive algorithms, URS/DRS alignment |
 | 1.3     | 02/07/2026 | Tropeano | Strapi integration: switched from direct SQL Server to Strapi headless CMS + PostgreSQL, all DB access via REST API |
+| 1.4     | 22/07/2026 | Tropeano | PDF→Claude AI extraction implemented (FR10, NFR6 updated), device linking/auto-creation (FR8), Excel column mapping corrected, API token optional, export tool added, CLI flags --brand/--model/--manufacturer/--year |
 
 # Index
 
@@ -51,7 +52,7 @@ The primary objective, defined at **Point C1** of the Ariadne data flow scheme, 
 
 **Scope restriction — Phase 1: C1 components only.** This phase focuses exclusively on **primary electrical/electronic components (C1)** as those found on PCBs. These are components in their minimum functional form, not further simplifiable/disassemblable without losing their characteristics. Large appliances, disassembly assistance, material sorting, and market value calculation are out of scope for this phase.
 
-Excel files (.xlsx) are used exclusively as an **input format** for importing BOM data. All persistent data is stored in a database managed via **Strapi** (headless CMS, https://strapi.io/), accessible exclusively through its REST API. The underlying database is PostgreSQL.
+Excel files (.xlsx) are used exclusively as an **input format** for importing BOM data. All persistent data is stored in a database managed via **Strapi** (headless CMS, https://strapi.io/), accessible exclusively through its REST API. The underlying database is PostgreSQL. A CLI-based **database export tool** is available for generating Excel reports from Strapi data (6 sheets: Summary, EEC Categories, Reference Designators, BOM Entries, Devices, Audit Logs).
 
 <a id="sp1.2"></a>
 
@@ -95,6 +96,7 @@ Excel files (.xlsx) are used exclusively as an **input format** for importing BO
 - Revision notes from Rosario Capponi (0 REV 1 R - Sistema Ariadne data driven Materials recovery.docx)
 - EU Critical Raw Materials Regulation (Regulation EU 2024/1252)
 - IEEE/ANSI Reference Designators Standard
+- Scheda STM-Steval Spin3204 - Copia x Luca.xlsx (real BOM Excel, 17 columns, header row 6)
 
 <a id="p2"></a>
 
@@ -127,7 +129,8 @@ The **Ariadne system** bridges the gap between physical WEEE devices and digital
 - C2 components (semi-finished products / sub-assemblies)
 - C3 components (finished products with Digital Product Passport)
 - Computer vision recognition (OpenCV) for device identification
-- AI/LLM for automatic MDF parsing
+- OCR for scanned/image PDFs (current PDF extraction requires text-based PDFs)
+- Advanced MDF parsing with structured material breakdown
 - Disassembly assistance for large WEEE
 - Material sorting (containers A-L)
 - Market value calculation
@@ -249,15 +252,15 @@ The system supports standard reference designators according to IEEE/ANSI conven
 | FR5  | For each BOM component, the system shall store the corresponding Material Declaration Form (MDF) data: material name (English), CASRN, mass (mg), and any materials used under RoHS exemption         | M        |
 | FR6  | The system shall distinguish between elemental materials and compounds (organic/inorganic) in material declarations                                                                                   | M        |
 | FR7  | The system shall support recording up to 3 suppliers per component with their respective catalog numbers, to facilitate MDF retrieval                                                                   | O        |
-| FR8  | The system shall store device/PCB metadata: brand, model name, manufacturer, year of production                                                                                                        | M        |
+| FR8  | The system shall store device/PCB metadata: brand, model name, manufacturer, year of production. Devices are automatically created or retrieved during BOM import via CLI flags (--brand, --model, --manufacturer, --year), or linked to existing devices by model name | M        |
 | FR9  | The system shall allow queries for: **which** materials, **how many** (mass), and **where** (component/designator) they are located in a device                                                         | M        |
-| FR10 | The system shall support an **optional intermediate Excel export** for manual verification of AI-extracted MDF data before loading into the SQL DB (Note: AI/LLM for MDF parsing is planned for future phases; the intermediate Excel step provides a safety check during the transition) | D        |
+| FR10 | The system shall support an **optional intermediate Excel export** for manual verification of AI-extracted MDF data before loading into the SQL DB. The current implementation uses Claude AI (Anthropic) for BOM extraction from PDF text, with results written directly to Strapi API (Note: OCR for scanned PDFs and advanced MDF parsing are planned for future phases) | D        |
 | FR11 | The system shall be a web application accessible via browser                                                                                                                                           | M        |
 | FR12 | The system shall integrate with the Ariadne data platform for data exchange and future expansion to C2/C3                                                                                             | M        |
 | FR13 | The system shall allow manual entry of component data for products without a digital BOM                                                                                                               | D        |
 | FR14 | The system shall support the use of average/estimated material composition data for components where the original MDF is not available, based on data from similar known components. This will enable predictive algorithms (future development) for estimating composition of components without direct MDF sourcing | D |
 
-**Note on AI/LLM, OpenCV, disassembly assistance, sorting containers, and market values:** These functionalities are intentionally excluded from Phase 1. They will be developed in subsequent phases of the Ariadne platform roadmap.
+**Note on AI/LLM, OpenCV, disassembly assistance, sorting containers, and market values:** Claude AI (Anthropic) is currently integrated for BOM extraction from text-based PDFs. OCR for scanned PDFs, OpenCV computer vision, disassembly assistance, sorting containers, and market values are intentionally excluded from Phase 1 and will be developed in subsequent phases of the Ariadne platform roadmap.
 
 <a id="sp3.3"></a>
 
@@ -270,7 +273,7 @@ The system supports standard reference designators according to IEEE/ANSI conven
 | NFR3 | The system shall ensure consistency and correctness of material information (validation upon import)                     | M        |
 | NFR4 | The system shall store material masses in mg (milligrams) as the standard unit of measure                                | M        |
 | NFR5 | The system shall be scalable to support 1000+ device models and all 16 EEC categories                                   | D        |
-| NFR6 | The system shall support integration with external systems, including AI modules for MDF parsing (future phase)          | D        |
+| NFR6 | The system shall support integration with external systems, including AI modules for MDF parsing (Claude API currently implemented for BOM extraction; advanced MDF parsing for subsequent phases) | D        |
 | NFR7 | Material names in the DB shall be in English                                                                             | M        |
 
 <a id="sp3.4"></a>

@@ -1,0 +1,40 @@
+Elenco del percorso delle cartelle per il volume Windows
+Numero di serie del volume: 000000B8-EE04:CE0D
+C:.
+|   AUTHORS.md
+|   LICENCE.md
+|   README.md
+|   struttura.txt
+|   
++---docs
+|   |   README.md
+|   |   
+|   +---drs
+|   |   |   drs.md
+|   |   |   
+|   |   \---imgs
+|   |           README.md
+|   |           
+|   +---manuals
+|   |       compile.md
+|   |       install.md
+|   |       run.md
+|   |       
+|   +---ref
+|   |       README.md
+|   |       
+|   \---urs
+|       |   urs.md
+|       |   
+|       \---imgs
+|               README.md
+|               
+\---src
+    |   REAME.md
+    |   
+    +---main
+    |       README.md
+    |       
+    \---tests
+            README.md
+            

@@ -6,7 +6,7 @@ DIBRIS – University of Genoa. Polytechnic School, Software Engineering Course 
 
 <div align='right'> <b> Authors </b> <br> Tropeano Luca </div>
 
-**VERSION : 1.3**
+**VERSION : 1.4**
 
 ### REVISION HISTORY
 
@@ -16,6 +16,7 @@ DIBRIS – University of Genoa. Polytechnic School, Software Engineering Course 
 | 1.1      | 28/06/2026 | Tropeano  | Revision after Rosario's feedback — scope narrowed to C1 only, simplified DB schema, removed future-phase modules  |
 | 1.2      | 02/07/2026 | Tropeano  | Rosario feedback revision v2: MountingType, SMT/THT, 'where' clarified, EEC≠designator explained, URS/DRS alignment |
 | 1.3      | 02/07/2026 | Tropeano  | Strapi integration: replaced direct SQL Server with Strapi headless CMS + PostgreSQL, updated technology stack and architecture |
+| 1.4      | 22/07/2026 | Tropeano  | PDF→Claude AI extraction implemented (PdfPig + Anthropic API), BOM Import Service updated with device auto-creation and CLI flags, Excel column mapping corrected (17 cols), API token optional, StrapiClient relation payloads fixed, export tool added, 62 xUnit tests passing, bootstrap auto-permissions |
 
 ## Table of Contents
 
@@ -168,12 +169,14 @@ DIBRIS – University of Genoa. Polytechnic School, Software Engineering Course 
 | Frontend    | ASP.NET Core Blazor / Razor Pages or React                                         |
 | Backend API | **Strapi** (headless CMS, automatic REST/GraphQL APIs)                             |
 | Database    | PostgreSQL (managed by Strapi)                                                     |
-| BOM Import  | EPPlus (Excel parsing) → Strapi API (POST)                                         |
-| AI/LLM      | Future: MDF parsing from PDF, Doc, Docx (subsequent phase)                         |
-| OCR         | Future: document recognition (subsequent phase)                                    |
+| BOM Import  | **.NET CLI Service** — EPPlus (Excel parsing), PdfPig (PDF text extraction) → Strapi API |
+| AI/LLM      | **Claude API** (Anthropic) — BOM extraction from PDF text (implemented)            |
+| Testing     | xUnit (.NET) — 62 unit tests covering BOM import, PDF extraction, designator validation |
+| Export Tool | **StrapiExport** — CLI tool to export Strapi database to 6-sheet Excel (Summary, EEC, RD, BOM, Devices, Audit Logs) |
+| OCR         | Future: document recognition for scanned PDFs (subsequent phase)                    |
 | Hosting     | IIS / Azure App Service (frontend) + Strapi server                                 |
    
-<p><b>Technologies explicitly excluded from Phase 1:</b> OpenCV (computer vision), AI/LLM for document parsing, OCR. These will be introduced in subsequent phases.</p>
+<p><b>Technologies explicitly excluded from Phase 1:</b> OpenCV (computer vision), OCR for scanned PDFs. These will be introduced in subsequent phases.</p>
 </details>
 
 ### <a id="constraints"></a> 2.4 Assumptions and Constraints
@@ -215,7 +218,8 @@ DIBRIS – University of Genoa. Polytechnic School, Software Engineering Course 
 
 Data Pipeline:
   BOM Excel → [EPPlus Parser] → Strapi API POST → PostgreSQL (component list)
-  MDF PDF → [Manual Entry / AI Extraction] → [Optional Intermediate Excel] → Strapi API POST → PostgreSQL (materials)
+  MDF PDF → [PdfPig Text Extraction] → [Claude AI API] → JSON → Strapi API POST → PostgreSQL (materials)
+  MDF PDF → [Manual Entry via UI] → Strapi API POST → PostgreSQL (materials)
     </pre>
     <p>Strapi serves as the API backend, exposing automatic REST APIs for each Collection Type. Business logic (BOM import, validation) resides in the frontend or in separate services that call the Strapi APIs. The MDF pipeline supports both manual entry and (in the future) AI-assisted extraction with an optional intermediate Excel step for data verification.</p>
 
@@ -230,7 +234,8 @@ Data Pipeline:
     • <b>File Import:</b> BOM Excel upload via EPPlus; MDF PDF upload (for future AI processing)<br>
     • <b>API Interface:</b> REST endpoints for device management, BOM import, material data entry, queries<br>
     • <b>Database Interface:</b> Strapi REST APIs (automatic CRUD) for persistent storage on PostgreSQL<br>
-    • <b>Excel Export (optional):</b> Intermediate export for manual verification of MDF data before committing to DB
+    • <b>Excel Export (optional):</b> Intermediate export for manual verification of MDF data before committing to DB<br>
+    • <b>Database Export (CLI):</b> StrapiExport tool generates 6-sheet Excel from Strapi API (Summary, EEC Categories, Reference Designators, BOM Entries, Devices, Audit Logs)
     </p>
 </details>
 
@@ -391,15 +396,16 @@ The following schema defines the Strapi Collection Types for Phase 1: C1 compone
     (3) Enters material name (English), CASRN, mass (mg) via web UI<br>
     (4) The system validates the CASRN format and stores data in PostgreSQL (via Strapi)</p>
     
-    <p><b>Approach B — AI-Assisted Extraction (with optional Excel verification):</b><br>
-    (1) AI extracts material data from the MDF PDF<br>
-    (2) Data is written to an intermediate Excel file for human verification<br>
-    (3) The operator reviews the Excel file for correctness and completeness<br>
-    (4) After approval, data is imported from Excel into PostgreSQL (via Strapi) through the Strapi API<br>
-    (5) This approach provides a safety check on AI interpretation of complex documents</p>
+    <p><b>Approach B — AI-Assisted Extraction (implemented):</b><br>
+    (1) PdfPig extracts text from the MDF PDF<br>
+    (2) Text is sent to Claude AI (Anthropic API) with a system prompt for BOM extraction<br>
+    (3) Claude returns a JSON array of BOMEntryDto objects<br>
+    (4) JSON is parsed and validated (designator → EEC category mapping)<br>
+    (5) Data is written to PostgreSQL via Strapi API<br>
+    (6) This is the primary automated path for PDF-based MDF processing</p>
     
     <p><b>Approach C — Direct AI to PostgreSQL (via Strapi) (future):</b><br>
-    (1) AI extracts and validates data automatically<br>
+    (1) AI extracts and validates data automatically with higher accuracy models<br>
     (2) Data is written directly to PostgreSQL (via Strapi)<br>
     (3) Requires a mature AI model with high accuracy — planned for subsequent phases</p>
 
@@ -552,16 +558,18 @@ WHERE d.ModelName = 'STEVAL-SPIN3204' AND m.CASRN = '7440-50-8'</pre>
 
 | Role | Accessible Collection Types | Operations |
 |------|---------------------------|------------|
-| Public API (anonymous) | Device (read-only), BOMEntry, ComponentMaterial, Material, ReferenceDesignator, EEC_Category | GET (query "which/how many/where") |
+| Public API (anonymous) | Device, BOMEntry, ComponentMaterial, Material, ReferenceDesignator, EEC_Category, AuditLog | Full CRUD (all operations) |
 | API Key (BOM import) | Device, BOMEntry, ComponentMaterial, Material, EEC_Category | POST, PUT (data import) |
 | Admin (Strapi admin UI) | All | Full CRUD, permission management |
+
+**Note:** API token is optional — the Public role has full CRUD permissions configured automatically by the bootstrap script (`src/index.ts`). When the API token is empty or starts with `<`, the `StrapiClient` skips the `Authorization` header and relies on Public role permissions.
 
 </details>
 
 ## <a name="bom-import-design"></a> 6 BOM Import Service Design
 
 <details>
-    <summary> Specification of the BOM import service via EPPlus → Strapi API </summary>
+    <summary> Specification of the .NET BOM Import Service (Excel + PDF via Claude AI) → Strapi API </summary>
 
 ### 6.1 Service Architecture
 
@@ -571,37 +579,58 @@ WHERE d.ModelName = 'STEVAL-SPIN3204' AND m.CASRN = '7440-50-8'</pre>
 │ (.xlsx)     │     │ (.NET / C#)      │     │ (API Key)   │     │ (REST)       │
 └─────────────┘     └──────────────────┘     └─────────────┘     └──────┬───────┘
                            │                                            │
-                           ▼                                            ▼
-                    ┌──────────────┐                           ┌──────────────┐
-                    │ Validation   │                           │ PostgreSQL   │
-                    │ Columns      │                           │ (Collection  │
-                    │ Data Types   │                           │ Types)       │
-                    │ Duplicates   │                           └──────────────┘
-                    └──────────────┘
+┌─────────────┐            │                                            ▼
+│ MDF PDF     │──▶PdfPig──▶│ Claude API ──▶ JSON parse                  │
+│ (.pdf)      │   Extract  │ (Anthropic)   BOMEntryDto                  │
+└─────────────┘            │                                            ▼
+                     ┌──────────────┐                           ┌──────────────┐
+                     │ Validation   │                           │ PostgreSQL   │
+                     │ Designator   │                           │ (Collection  │
+                     │ EEC Category │                           │ Types)       │
+                     └──────────────┘                           └──────────────┘
 ```
 
 ### 6.2 Main Classes
 
+**Program.cs** — CLI entry point:
+- Auto-detects file format (.xlsx / .pdf) from extension
+- Supports CLI flags: `--brand`, `--model`, `--manufacturer`, `--year` for device auto-creation
+- If `--brand`/`--model` provided, calls `FindOrCreateDeviceAsync()` to create or retrieve the device
+- Dispatches to appropriate import flow
+
 **BOMImportService** — process orchestrator:
-- `ImportBom(string filePath, int deviceId)` → `BomImportResult`
-- Reads Excel file with EPPlus
-- Validates column structure
-- For each row: classifies component (DesignatorValidator)
+- `FindOrCreateDeviceAsync(DeviceDto)` → `string?` (documentId) — checks if device exists, creates if not
+- `ImportBomAsync(Stream excelStream, string? deviceDocumentId, string userId)` → `BomImportResult` (Excel flow)
+- `ImportBomFromEntriesAsync(List<BOMEntryDto> entries, string? deviceDocumentId, string userId)` → `BomImportResult` (PDF flow)
+- Reads Excel file with EPPlus, validates column structure
+- For each row: classifies component (DesignatorValidator), maps EEC category
 - Builds JSON payloads for Strapi API
-- Sends batch (or individual) requests
+
+**PdfExtractor** — PDF text extraction:
+- `ExtractText(string pdfPath)` → `string`
+- Uses PdfPig (OpenSource) for native PDF text extraction
+- Returns page-separated text (does not handle scanned/image PDFs)
+
+**ClaudeClient** — Claude API integration:
+- `SendMessageAsync(string userMessage, string? systemPrompt)` → `string`
+- Communicates with Anthropic API (Claude Sonnet 4)
+- Returns JSON array of BOMEntryDto objects
 
 **DesignatorValidator** — classifies the designator:
 - `GetDesignatorCode(string reference)` → `string`
-- `GetEECCategoryId(string designatorCode)` → `int`
-- Uses ReferenceDesignator table from Strapi (GET /api/reference-designators)
+- Maps first character of reference designator to standard code
 
 **EECClassifier** — maps designator → EEC category:
-- `Classify(string designatorCode)` → `int` (categoryId 1-16)
+- `GetCategoryIdAsync(string designatorCode)` → `int`
+- Queries Strapi /api/reference-designator for category mapping
 
 **StrapiClient** — HTTP wrapper for Strapi APIs:
-- `PostAsync<T>(string endpoint, T data)` → `ApiResponse`
+- `PostAsync<T>(string endpoint, T data)` → `ApiResponse` — serializes `data` directly (no double-wrapping; callers pass full `{ data = ... }` payload)
 - `GetAsync<T>(string endpoint, Dictionary filters)` → `ApiResponse`
-- Authentication via API Key (header `Authorization: Bearer <token>`)
+- `PutAsync<T>(string endpoint, int id, object data)` → `ApiResponse`
+- `DeleteAsync(string endpoint, int id)` → `bool`
+- Authentication via API Key (header `Authorization: Bearer <token>`) — **optional**: if token is empty or starts with `<`, header is skipped (relies on Public role CRUD permissions)
+- Error responses include full Strapi error body in `Console.Error` for debugging
 
 **BomImportResult** — import result:
 - `bool Success`
@@ -611,7 +640,7 @@ WHERE d.ModelName = 'STEVAL-SPIN3204' AND m.CASRN = '7440-50-8'</pre>
 - `List<string> Warnings`
 - `List<string> Errors`
 
-### 6.3 Execution Flow
+### 6.3 Execution Flow — Excel
 
 ```
 1. Load BOM file (.xlsx)
@@ -620,32 +649,133 @@ WHERE d.ModelName = 'STEVAL-SPIN3204' AND m.CASRN = '7440-50-8'</pre>
    a. Read Reference Designator (e.g. "C1,C5,C7...")
    b. Determine DesignatorCode (e.g. "C") via DesignatorValidator
    c. Get EEC_CategoryId from ReferenceDesignator on Strapi
-   d. Build BOMEntry JSON payload
-   e. POST /api/bom-entries (linked to Device)
-4. Check if Device already exists on Strapi, otherwise create it
+   d. Build BOMEntry JSON payload (with device relation via documentId)
+   e. POST /api/bom-entry (linked to Device via documentId)
+4. If CLI flags --brand/--model provided: FindOrCreateDeviceAsync() → create/retrieve device
+5. Log audit entry → POST /api/audit-log
+6. Return import report
+```
+
+### 6.4 Execution Flow — PDF → Claude AI
+
+```
+1. PdfExtractor.ExtractText(pdfPath) → raw text
+2. ClaudeClient.SendMessageAsync(rawText, systemPrompt) → JSON string
+3. ParseClaudeResponse(json) → List<BOMEntryDto>
+4. For each entry:
+   a. Validate DesignatorCode (DesignatorValidator)
+   b. Get EEC_CategoryId from Strapi
+   c. POST /api/bom-entry
 5. Return import report
 ```
 
-### 6.4 Excel → BOMEntry Column Mapping
+### 6.5 Excel → BOMEntry Column Mapping
 
-| Excel Column | Strapi Field | Example |
-|-------------|-------------|---------|
-| Item | itemNumber | 1 |
-| Qty | quantity | 14 |
-| Reference | referenceDesignator | C1,C5,C7... |
-| Part/Value | partValue | 100 nF |
-| Package | (not mapped directly — helpful for SMT/THT detection) | 0603 |
-| Manufacturer | manufacturer | KEMET |
-| --- | mountingType | SMT (default for SMT packages) |
+The real BOM Excel (`Scheda STM-Steval Spin3204 - Copia x Luca.xlsx`) has **17 columns** with header on row 6. Mapping:
 
-### 6.5 Strapi Endpoints Used
+| Excel Col | Header | Strapi Field | Notes |
+|-----------|--------|-------------|-------|
+| 1 | Item | itemNumber | Parsed via `int.TryParse` — skips non-numeric rows |
+| 2 | Qty | quantity | Parsed via `int.TryParse` |
+| 3 | Reference | referenceDesignator | Comma-separated designators |
+| 5 | Part/Value | partValue | Component value (e.g. 100 nF) |
+| 9 | Package | mountingType | Used for SMT/THT detection (DIP/SIP/TO- → THT, else SMT) |
+| 10 | Manufacturer | manufacturer | Component manufacturer |
+| 11 | Mfr Order Code | manufacturerOrderCode | Manufacturer ordering code |
+| 12 | Notes | notes | Free-text notes |
+| 13 | Supplier | supplier1 | First supplier |
+| 14 | Supplier Code | supplier1OrderCode | Supplier 1 catalog number |
+
+Columns 4 (Description), 6 (Footprint), 7 (Quantity in stock), 8 (Unit Price), 15-17 (extra supplier data) are present in the file but not mapped to Strapi fields.
+
+### 6.6 Strapi Endpoints Used
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | /api/devices?filters[modelName][$eq]=... | Check Device existence |
-| POST | /api/devices | Create new Device |
-| POST | /api/bom-entries | Create BOMEntry |
-| GET | /api/reference-designators?filters[designatorCode][$eq]=... | Get EEC category |
-| POST | /api/audit-logs | Log operation |
+| GET | /api/device?filters[modelName][$eq]=... | Check Device existence |
+| POST | /api/device | Create new Device |
+| POST | /api/bom-entry | Create BOMEntry (with device + eecCategory via documentId) |
+| GET | /api/reference-designator?populate=eecCategory&filters[designatorCode][$eq]=... | Get EEC category for designator |
+| POST | /api/audit-log | Log operation (with device via documentId) |
+
+**Note:** Strapi v5 uses **singular** API paths (`/api/device`, not `/api/devices`). Relations in POST payloads use `{ "documentId": "xxx" }` format — raw int IDs cause 400 errors.
+
+### 6.7 Unit Tests (xUnit)
+
+Progetto `BomImportService.Tests` con **62 test**:
+
+| Classe Test | # Test | Cosa verifica |
+|------------|--------|---------------|
+| DesignatorValidatorTests | 10 | Mapping designator → codice |
+| PdfExtractorTests | 4 | Estrazione testo PDF, eccezioni |
+| BomEntryParsingTests | 9 | Parsing righe Excel, mounting type |
+| ClaudeClientTests | 7 | Serializzazione request/response, errori |
+| ExcelParsingTests | 4 | Lettura Excel reale, righe vuote |
+
+### 6.8 DeviceDto
+
+```csharp
+public class DeviceDto
+{
+    public string Brand { get; set; } = string.Empty;
+    public string ModelName { get; set; } = string.Empty;
+    public string Manufacturer { get; set; } = string.Empty;
+    public int YearOfProduction { get; set; }
+    public string? Notes { get; set; }
+}
+```
+
+Used by `FindOrCreateDeviceAsync()` for device auto-creation via CLI flags.
+
+### 6.9 CLI Usage
+
+```
+BomImportService <file> [--brand X] [--model X] [--manufacturer X] [--year N]
+
+  .xlsx  — import diretto da Excel
+  .pdf   — estrazione via Claude AI → Strapi
+
+Options:
+  --brand         Device brand (e.g. STMicroelectronics)
+  --model         Device model (e.g. STEVAL-SPIN3204)
+  --manufacturer  Device manufacturer
+  --year          Year of production
+```
+
+</details>
+
+## <a name="export-tool"></a> 7 Database Export Tool
+
+<details>
+    <summary> CLI tool for exporting Strapi database to Excel </summary>
+
+### 7.1 Overview
+
+A standalone CLI tool (`src/main/Tools/`) exports all Strapi data to a formatted Excel workbook with 6 sheets.
+
+### 7.2 Generated Sheets
+
+| Sheet | Content |
+|-------|---------|
+| Summary | Export date, record counts per table, BOM breakdown by designator |
+| EEC Categories | All 16 EEC categories with subcategories |
+| Reference Designators | All 19 designators with EEC category mapping |
+| BOM Entries | Full BOM with all fields, auto-filter enabled |
+| Devices | All devices/PCBs |
+| Audit Logs | Import operation history |
+
+### 7.3 Architecture
+
+- Uses `HttpClient` to fetch all data from Strapi REST API with pagination
+- Uses EPPlus to generate Excel with formatted headers (blue background, white text)
+- Outputs to `exports/StrapiExport_YYYYMMDD_HHmmss.xlsx`
+- Auto-opens the generated file on completion
+
+### 7.4 Execution
+
+```bash
+cd src/main/Tools
+dotnet run
+```
 
 </details>

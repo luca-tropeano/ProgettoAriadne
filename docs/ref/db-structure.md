@@ -1,6 +1,6 @@
 # Struttura del Database — Sistema Ariadne di Recupero Materiali (Fase 1)
 
-**VERSIONE : 1.3** | **Data:** 02/07/2026 | **Autore:** Tropeano Luca
+**VERSIONE : 1.4** | **Data:** 22/07/2026 | **Autore:** Tropeano Luca
 
 ## Piattaforma
 
@@ -131,9 +131,11 @@ Ogni tabella è un **Collection Type** Strapi. Le relazioni sono nativamente ges
 
 | Ruolo | Collection Types accessibili | Operazioni |
 |-------|---------------------------|------------|
-| Public API (anonimo) | Device (sola lettura), BOMEntry, ComponentMaterial, Material, ReferenceDesignator, EEC_Category | GET (query "quali/quanti/dove") |
+| Public API (anonimo) | Device, BOMEntry, ComponentMaterial, Material, ReferenceDesignator, EEC_Category, AuditLog | CRUD completo (tutte le operazioni) |
 | API Key (import BOM) | Device, BOMEntry, ComponentMaterial, Material, EEC_Category | POST, PUT (import dati) |
 | Admin (Strapi admin UI) | Tutti | CRUD completo, gestione permessi |
+
+**Nota:** I permessi del ruolo Public vengono configurati automaticamente dal bootstrap script (`src/index.ts`) ad ogni avvio di Strapi in sviluppo. Il bootstrap crea permessi `find`, `findOne`, `create`, `update`, `delete` per tutti e 7 i Collection Type, verificando che non esistano già per evitare duplicazioni. L'API token è opzionale — quando vuoto o inizia con `<`, lo StrapiClient salta l'header Authorization e si affida ai permessi CRUD del ruolo Public.
 
 ---
 
@@ -145,16 +147,16 @@ Tutti i dati sono accessibili tramite API REST generate da Strapi:
 
 ```http
 # Quali materiali sono in un dispositivo (fetch Device con populate)
-GET /api/devices?populate[bomEntries][populate][componentMaterials][populate][material]=*
+GET /api/device?populate[bomEntries][populate][componentMaterials][populate][material]=*
 
 # Quanto (massa) di ogni materiale?
-GET /api/devices?filters[modelName][$eq]=STEVAL-SPIN3204&populate[bomEntries][populate][componentMaterials][populate][material]=*
+GET /api/device?filters[modelName][$eq]=STEVAL-SPIN3204&populate[bomEntries][populate][componentMaterials][populate][material]=*
 
 # Dove (quale componente) si trova un materiale specifico?
-GET /api/component-materials?filters[material][casrn][$eq]=7440-50-8&populate[bomEntry]=*
+GET /api/component-material?filters[material][casrn][$eq]=7440-50-8&populate[bomEntry]=*
 
 # Inserimento di un nuovo Device
-POST /api/devices
+POST /api/device
 {
   "data": {
     "brand": "STMicroelectronics",
@@ -164,8 +166,8 @@ POST /api/devices
   }
 }
 
-# Inserimento di un BOMEntry collegato a un Device
-POST /api/bom-entries
+# Inserimento di un BOMEntry collegato a un Device (Strapi v5: relations via documentId)
+POST /api/bom-entry
 {
   "data": {
     "itemNumber": 1,
@@ -175,23 +177,25 @@ POST /api/bom-entries
     "partValue": "100 nF",
     "manufacturer": "KEMET",
     "manufacturerOrderCode": "C0603C104K5RACTU",
-    "device": 1,
-    "eecCategory": 2
+    "device": { "documentId": "xyz123" },
+    "eecCategory": { "documentId": "abc456" }
   }
 }
 
-# Inserimento dati materiali da MDF
-POST /api/component-materials
+# Inserimento dati materiali da MDF (relations via documentId)
+POST /api/component-material
 {
   "data": {
     "massMg": 12.5,
     "note": "Wire termination",
     "sourceMdf": "MDF_KEMET_C0603.pdf",
-    "bomEntry": 1,
-    "material": 1
+    "bomEntry": { "documentId": "bom123" },
+    "material": { "documentId": "mat456" }
   }
 }
 ```
+
+**Nota Strapi v5:** I percorsi API sono **singolari** (`/api/device`, non `/api/devices`). Le relazioni nei payload POST/PUT devono usare il formato `{ "documentId": "xxx" }` — gli ID interi grezzi causano errori 400.
 
 ---
 
@@ -200,7 +204,7 @@ POST /api/component-materials
 ```
 ┌──────────┐    ┌──────────┐    ┌───────────────────┐
 │ BOM Excel│───▶│ EPPlus   │───▶│ Strapi API (POST) │
-│ (input)  │    │ Parser   │    │ → Collection Type  │
+│ (.xlsx)  │    │ Parser   │    │ → Collection Type  │
 └──────────┘    └──────────┘    └────────┬──────────┘
                                          │
                                          ▼
@@ -209,24 +213,40 @@ POST /api/component-materials
                      │          └────────┬─────────┘
                      ▼                   ▼
            ┌─────────────────┐  ┌─────────────────┐
-           │ Inserimento     │  │ Estrazione AI   │
-           │ Manuale (via UI)│  │ (fase futura)   │
+           │ Inserimento     │  │ PdfPig          │
+           │ Manuale (via UI)│  │ (text extraction)│
            └────────┬────────┘  └────────┬────────┘
                     │                    ▼
                     │          ┌──────────────────────┐
-                    │          │ Excel Intermedio      │
-                    │          │ (verifica opzionale)  │
+                    │          │ Claude AI API         │
+                    │          │ (BOM extraction)      │
+                    │          └──────────┬───────────┘
+                    │                     ▼
+                    │          ┌──────────────────────┐
+                    │          │ JSON → BOMEntryDto    │
+                    │          │ (validazione)         │
                     │          └──────────┬───────────┘
                     ▼                     ▼
            ┌──────────────────────────────────────┐
            │         Strapi API                    │
            │  (POST/PUT → Collection Types)        │
-           │  ComponentMaterial + Material         │
+           │  BOMEntry + ComponentMaterial         │
            └──────────────────────────────────────┘
                     │
                     ▼
            ┌──────────────────────────────────────┐
-           │         Frontend UI                   │
-           │  (chiamate API Strapi per query)      │
+           │         PostgreSQL                    │
+           │  (query "quali/quanti/dove")          │
            └──────────────────────────────────────┘
 ```
+
+**Flussi implementati:**
+1. **Excel → Strapi** (BOM Import): `BOMImportService.ImportBomAsync()` — parsing EPPlus → validazione designator → Strapi API
+2. **PDF → Claude → Strapi** (AI Extraction): `PdfExtractor` + `ClaudeClient` → `ImportBomFromEntriesAsync()` — PdfPig estrae testo, Claude estrae JSON BOM, salvataggio su Strapi
+3. **Inserimento manuale** (via Admin UI o API): accesso diretto ai Collection Type
+4. **Export Strapi → Excel**: StrapiExport tool — API REST con paginazione → EPPlus → 6 fogli Excel
+
+**Note implementative:**
+- **EECClassifier query**: usa formato query string diretto `filters[designatorCode][$eq]=X&populate=eecCategory` — non serializzazione oggetti annidati
+- **StrapiClient PostAsync**: serializza il payload direttamente (no double-wrapping) — i chiamanti passano il payload completo `{ data = ... }`
+- **StrapiClient errore**: in caso di risposta non riuscita, il body completo dell'errore viene stampato in Console.Error per il debug

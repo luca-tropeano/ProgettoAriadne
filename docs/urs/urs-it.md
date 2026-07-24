@@ -2,7 +2,7 @@
 
 ##### DIBRIS – Università di Genova. Scuola Politecnica, Corso di Ingegneria del Software 80154
 
-**VERSIONE : 1.3**
+**VERSIONE : 1.4**
 
 **Autori**
 Tropeano Luca
@@ -15,6 +15,7 @@ Tropeano Luca
 | 1.1      | 28/06/2026 | Tropeano | Revisione dopo feedback Rosario — scope focalizzato su soli componenti C1 |
 | 1.2      | 02/07/2026 | Tropeano | Revisione feedback Rosario v2: C1 definito, SMT/THT, RoHS, algoritmi predittivi, allineamento URS/DRS |
 | 1.3      | 02/07/2026 | Tropeano | Integrazione Strapi: passaggio da SQL Server diretto a Strapi headless CMS + PostgreSQL, accesso DB tramite API REST |
+| 1.4      | 22/07/2026 | Tropeano | Estrazione PDF→Claude AI implementata (FR10, NFR6 aggiornati), collegamento/creazione automatica dispositivi (FR8), mapping colonne Excel corretto, API token opzionale, tool export aggiunto, flag CLI --brand/--model/--manufacturer/--year |
 
 # Indice
 
@@ -51,7 +52,7 @@ L'obiettivo principale, definito al **Punto C1** dello schema del flusso dati Ar
 
 **Restrizione di scopo — Fase 1: soli componenti C1.** Questa fase si concentra esclusivamente sui **componenti elettrici/elettronici primari** (C1) come quelli presenti su PCB. Questi sono componenti nella loro forma funzionale minima, non ulteriormente semplificabili/smontabili senza perdere le loro caratteristiche. Grandi elettrodomestici, assistenza al disassemblaggio, smistamento materiali e calcolo valori di mercato sono fuori scopo per questa fase.
 
-I file Excel (.xlsx) sono utilizzati esclusivamente come **formato di input** per importare i dati BOM. Tutti i dati persistenti sono memorizzati in un database gestito tramite **Strapi** (headless CMS, https://strapi.io/), accessibile esclusivamente tramite la sua REST API. Il database sottostante è PostgreSQL.
+I file Excel (.xlsx) sono utilizzati esclusivamente come **formato di input** per importare i dati BOM. Tutti i dati persistenti sono memorizzati in un database gestito tramite **Strapi** (headless CMS, https://strapi.io/), accessibile esclusivamente tramite la sua REST API. Il database sottostante è PostgreSQL. È disponibile un **tool di export** CLI per generare report Excel dai dati Strapi (6 fogli: Summary, EEC Categories, Reference Designators, BOM Entries, Devices, Audit Logs).
 
 <a id="sp1.2"></a>
 
@@ -96,6 +97,7 @@ I file Excel (.xlsx) sono utilizzati esclusivamente come **formato di input** pe
 - Note di revisione da Rosario Capponi (0 REV 1 R - Sistema Ariadne data driven Materials recovery.docx)
 - Regolamento UE Materie Prime Critiche (Regolamento UE 2024/1252)
 - Standard IEEE/ANSI per Reference Designators
+- Scheda STM-Steval Spin3204 - Copia x Luca.xlsx (BOM Excel reale, 17 colonne, riga intestazioni 6)
 
 <a id="p2"></a>
 
@@ -128,7 +130,8 @@ Il **sistema Ariadne** colma il divario tra i dispositivi RAEE fisici e le infor
 - Componenti C2 (semilavorati / subassemblati)
 - Componenti C3 (prodotti finiti con Digital Product Passport)
 - Riconoscimento tramite computer vision (OpenCV) per identificazione dispositivi
-- AI/LLM per parsing automatico MDF
+- OCR per PDF scannerizzati (l'estrazione attuale richiede PDF testuali)
+- Parsing MDF avanzato con scomposizione strutturata dei materiali
 - Assistenza al disassemblaggio per grandi RAEE
 - Smistamento materiali (contenitori A-L)
 - Calcolo valore di mercato
@@ -250,15 +253,15 @@ Il sistema supporta i reference designator standard secondo le convenzioni IEEE/
 | FR5  | Per ogni componente BOM, il sistema deve memorizzare i dati della Material Declaration Form (MDF): nome materiale (in inglese), CASRN, massa (mg), ed eventuali materiali usati in deroga alla normativa RoHS                                                 | M        |
 | FR6  | Il sistema deve distinguere tra elementi materiali e composti (organici/inorganici) nelle dichiarazioni materiali                                                                                 | M        |
 | FR7  | Il sistema deve supportare la registrazione di fino a 3 fornitori per componente con i rispettivi numeri di catalogo, per facilitare il reperimento delle MDF                                     | O        |
-| FR8  | Il sistema deve memorizzare i metadati del dispositivo/PCB: marca, nome modello, produttore, anno di produzione                                                                                   | M        |
+| FR8  | Il sistema deve memorizzare i metadati del dispositivo/PCB: marca, nome modello, produttore, anno di produzione. I dispositivi vengono creati automaticamente o recuperati durante l'import BOM tramite flag CLI (--brand, --model, --manufacturer, --year), oppure collegati a dispositivi esistenti per nome modello | M        |
 | FR9  | Il sistema deve permettere interrogazioni per: **quali** materiali, **quanti** (massa) e **dove** (componente/designator) si trovano in un dispositivo                                            | M        |
-| FR10 | Il sistema deve supportare un **export Excel intermedio opzionale** per verifica manuale dei dati MDF estratti dall'AI prima del caricamento nel SQL DB (Nota: AI/LLM per parsing MDF è pianificato per fasi future; il passo Excel intermedio fornisce un controllo di sicurezza durante la transizione)                                           | D        |
+| FR10 | Il sistema deve supportare un **export Excel intermedio opzionale** per verifica manuale dei dati MDF estratti dall'AI prima del caricamento nel SQL DB. L'implementazione attuale utilizza Claude AI (Anthropic) per l'estrazione BOM da testo PDF, con i dati scritti direttamente su Strapi API (Nota: OCR per PDF scannerizzati e parsing MDF avanzato sono pianificati per fasi successive) | D        |
 | FR11 | Il sistema deve essere un'applicazione web accessibile via browser                                                                                                                                | M        |
 | FR12 | Il sistema deve integrarsi con la piattaforma dati Ariadne per lo scambio dati e la futura espansione a C2/C3                                                                                     | M        |
 | FR13 | Il sistema deve permettere l'inserimento manuale dei dati dei componenti per prodotti senza BOM digitale                                                                                          | D        |
 | FR14 | Il sistema deve permettere l'utilizzo di dati di composizione medi/stimati per componenti di cui non si dispone della MDF originale, basati sui dati di componenti simili noti. Questo abiliterà futuri algoritmi predittivi per la stima della composizione di componenti senza MDF diretta | D |
 
-**Nota su AI/LLM, OpenCV, assistenza disassemblaggio, contenitori smistamento e valori di mercato:** Queste funzionalità sono intenzionalmente escluse dalla Fase 1. Saranno sviluppate in fasi successive della roadmap della piattaforma Ariadne.
+**Nota su AI/LLM, OpenCV, assistenza disassemblaggio, contenitori smistamento e valori di mercato:** Claude AI (Anthropic) è attualmente integrato per l'estrazione BOM da PDF testuali. OCR per PDF scannerizzati, computer vision OpenCV, assistenza al disassemblaggio, contenitori smistamento e valori di mercato sono intenzionalmente esclusi dalla Fase 1 e saranno sviluppati in fasi successive della roadmap della piattaforma Ariadne.
 
 <a id="sp3.3"></a>
 
@@ -271,7 +274,7 @@ Il sistema supporta i reference designator standard secondo le convenzioni IEEE/
 | NFR3 | Il sistema deve garantire consistenza e correttezza delle informazioni sui materiali (validazione all'importazione) | M        |
 | NFR4 | Il sistema deve memorizzare le masse dei materiali in mg (milligrammi) come unità di misura standard                | M        |
 | NFR5 | Il sistema deve essere scalabile per supportare 1000+ modelli di dispositivi e tutte le 16 categorie EEC            | D        |
-| NFR6 | Il sistema deve supportare l'integrazione con sistemi esterni, inclusi moduli AI per parsing MDF (fase futura)      | D        |
+| NFR6 | Il sistema deve supportare l'integrazione con sistemi esterni, inclusi moduli AI per parsing MDF (API Claude attualmente implementata per estrazione BOM; parsing MDF avanzato per fasi successive) | D        |
 | NFR7 | I nomi dei materiali nel DB devono essere in inglese                                                                | M        |
 
 <a id="sp3.4"></a>

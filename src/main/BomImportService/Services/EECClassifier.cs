@@ -14,11 +14,9 @@ public class EECClassifier : IEECClassifier
 
     public async Task<int> GetCategoryIdAsync(string designatorCode)
     {
-        var response = await _strapiClient.GetAsync<ApiResponse<List<ReferenceDesignatorDto>>>(
-            "/api/reference-designators",
-            new { filters = new { designatorCode = new { eq = designatorCode } } });
+        var url = $"/api/reference-designator?populate=eecCategory&filters[designatorCode][$eq]={Uri.EscapeDataString(designatorCode)}";
+        var response = await _strapiClient.GetAsync<List<ReferenceDesignatorDto>>(url);
 
-        var designator = response.Data?.Data?.FirstOrDefault();
-        return designator?.EECCategoryId ?? 10; // default Resistors
+        return response.Data?.FirstOrDefault()?.EECCategoryId ?? 10;
     }
 }

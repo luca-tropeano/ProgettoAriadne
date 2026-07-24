@@ -21,14 +21,18 @@ public class StrapiClient : IStrapiClient
         {
             BaseAddress = new Uri(baseUrl.TrimEnd('/'))
         };
-        _httpClient.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", apiToken);
+        if (!string.IsNullOrWhiteSpace(apiToken) && !apiToken.StartsWith("<"))
+        {
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", apiToken);
+        }
     }
 
     public async Task<ApiResponse<T>> GetAsync<T>(string endpoint, object? filters = null)
     {
         var queryString = filters?.ToQueryString() ?? "";
-        var response = await _httpClient.GetAsync($"{endpoint}?{queryString}");
+        var url = string.IsNullOrEmpty(queryString) ? endpoint : $"{endpoint}?{queryString}";
+        var response = await _httpClient.GetAsync(url);
         response.EnsureSuccessStatusCode();
         var content = await response.Content.ReadAsStringAsync();
         return JsonSerializer.Deserialize<ApiResponse<T>>(content, JsonOptions)
@@ -37,10 +41,16 @@ public class StrapiClient : IStrapiClient
 
     public async Task<ApiResponse<T>> PostAsync<T>(string endpoint, object data)
     {
-        var json = JsonSerializer.Serialize(new { data }, JsonOptions);
+        var json = JsonSerializer.Serialize(data, JsonOptions);
         var httpContent = new StringContent(json, Encoding.UTF8, "application/json");
         var response = await _httpClient.PostAsync(endpoint, httpContent);
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync();
+            Console.Error.WriteLine($"  [STRAPI {(int)response.StatusCode}] {errorBody}");
+            throw new HttpRequestException(
+                $"Strapi returned {(int)response.StatusCode}: {errorBody}");
+        }
         var content = await response.Content.ReadAsStringAsync();
         return JsonSerializer.Deserialize<ApiResponse<T>>(content, JsonOptions)
             ?? throw new InvalidOperationException("Empty API response");
@@ -48,7 +58,7 @@ public class StrapiClient : IStrapiClient
 
     public async Task<ApiResponse<T>> PutAsync<T>(string endpoint, int id, object data)
     {
-        var json = JsonSerializer.Serialize(new { data }, JsonOptions);
+        var json = JsonSerializer.Serialize(data, JsonOptions);
         var httpContent = new StringContent(json, Encoding.UTF8, "application/json");
         var response = await _httpClient.PutAsync($"{endpoint}/{id}", httpContent);
         response.EnsureSuccessStatusCode();
