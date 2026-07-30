@@ -58,7 +58,7 @@ public class BomEntryParsingTests
     }
 
     [Fact]
-    public void ParseClaudeResponse_MarkdownWrapped_ExtractsJson()
+    public void ParseAiResponse_MarkdownWrapped_ExtractsJson()
     {
         var response = """
         ```json
@@ -87,7 +87,7 @@ public class BomEntryParsingTests
     }
 
     [Fact]
-    public void ParseClaudeResponse_RawJson_Works()
+    public void ParseAiResponse_RawJson_Works()
     {
         var response = "[{\"itemNumber\":1,\"quantity\":3,\"referenceDesignator\":\"U1\",\"mountingType\":\"THT\"}]";
 
@@ -100,7 +100,7 @@ public class BomEntryParsingTests
     }
 
     [Fact]
-    public void ParseClaudeResponse_EmptyArray_ReturnsEmptyList()
+    public void ParseAiResponse_EmptyArray_ReturnsEmptyList()
     {
         var response = "[]";
         var entries = JsonSerializer.Deserialize<List<BOMEntryDto>>(response, JsonOptions);

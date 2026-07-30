@@ -222,7 +222,7 @@ public class BOMImportService
                 timestamp = DateTime.UtcNow,
                 userId,
                 action = "BOM_IMPORT_PDF",
-                details = $"{result.ImportedRows} componenti importati da PDF via Claude",
+                details = $"{result.ImportedRows} componenti importati da PDF",
                 device = deviceDocumentId != null ? new { documentId = deviceDocumentId } : null
             }
         });

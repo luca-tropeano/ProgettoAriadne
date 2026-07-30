@@ -6,7 +6,7 @@ DIBRIS – Università di Genova. Scuola Politecnica, Corso di Ingegneria del So
 
 <div align='right'> <b> Autori </b> <br> Tropeano Luca </div>
 
-**VERSIONE : 1.4**
+**VERSIONE : 1.5**
 
 ### STORIO REVISIONI
 
@@ -16,7 +16,8 @@ DIBRIS – Università di Genova. Scuola Politecnica, Corso di Ingegneria del So
 | 1.1      | 28/06/2026 | Tropeano  | Revisione dopo feedback Rosario — scope focalizzato su soli C1, schema DB semplificato, rimossi moduli fasi future |
 | 1.2      | 02/07/2026 | Tropeano  | Revisione feedback Rosario v2: MountingType, SMT/THT, 'dove' chiarito, EEC≠designator spiegato, allineamento URS/DRS |
 | 1.3      | 02/07/2026 | Tropeano  | Integrazione Strapi: sostituito SQL Server diretto con Strapi headless CMS + PostgreSQL, aggiornato stack tecnologico e architettura |
-| 1.4      | 22/07/2026 | Tropeano  | Estrazione PDF→Claude AI implementata (PdfPig + API Anthropic), BOM Import Service aggiornato con creazione automatica dispositivi e flag CLI, mapping colonne Excel corretto (17 colonne), API token opzionale, relazioni Strapi fixed, tool export aggiunto, 62 test xUnit, bootstrap auto-permissions |
+| 1.4      | 22/07/2026 | Tropeano  | Estrazione PDF AI implementata, BOM Import Service aggiornato con creazione automatica dispositivi e flag CLI, mapping colonne Excel corretto (17 colonne), API token opzionale, relazioni Strapi fixed, tool export aggiunto, 62 test xUnit, bootstrap auto-permissions |
+| 1.5      | 29/07/2026 | Tropeano  | Riscrittura da C#/.NET a Python 3.11+. Pipeline BOM: pacchetto ariadne-py con openpyxl (Excel), pdfplumber (PDF), DeepSeek AI, database SQLite locale, upload SFTP. Test suite pytest. Architettura aggiornata ovunque. |
 
 ## Indice
 
@@ -78,7 +79,7 @@ DIBRIS – Università di Genova. Scuola Politecnica, Corso di Ingegneria del So
 | URS     | User Requirements Specification                                  |
 | API     | Application Programming Interface                                |
 | REST    | Representational State Transfer                                  |
-| EPPlus  | Libreria .NET per lettura/scrittura file Excel                   |
+| openpyxl | Libreria Python per lettura/scrittura file Excel              |
 | CRM     | Materie Prime Critiche (Reg. UE 2024/1252)                       |
 | EEC     | Electronic Engineering Components (classificazione 16 categorie) |
 | CASRN   | Chemical Abstracts Service Registry Number                       |
@@ -164,15 +165,15 @@ DIBRIS – Università di Genova. Scuola Politecnica, Corso di Ingegneria del So
 
 | Layer        | Tecnologia                                                                         |
 | ------------ | ---------------------------------------------------------------------------------- |
-| Frontend     | ASP.NET Core Blazor / Razor Pages o React                                          |
+| Frontend     | React (o altro framework web via Strapi API)                                       |
 | Backend API  | **Strapi** (headless CMS, REST/GraphQL API automatiche)                            |
-| Database     | PostgreSQL (gestito da Strapi)                                                     |
-| Import BOM   | **Servizio CLI .NET** — EPPlus (parsing Excel), PdfPig (estrazione testo PDF) → Strapi API |
-| AI/LLM       | **API Claude** (Anthropic) — estrazione BOM da testo PDF (implementato)             |
-| Testing      | xUnit (.NET) — 62 test che coprono import BOM, estrazione PDF, validazione designator |
-| Export Tool   | **StrapiExport** — strumento CLI per esportare il database Strapi in Excel a 6 fogli (Summary, EEC, RD, BOM, Devices, Audit Logs) |
+| Database     | SQLite (locale) / PostgreSQL (via Strapi)                                          |
+| Import BOM   | **CLI Python (ariadne-py)** — openpyxl (parsing Excel), pdfplumber (estrazione testo PDF) → SQLite / Strapi API |
+| AI/LLM       | **API DeepSeek** — estrazione BOM da testo PDF (implementato)                      |
+| Testing      | **pytest** — test che coprono import BOM, estrazione PDF, validazione modelli      |
+| Export Tool   | **Ariadne Export** — strumento CLI per esportare database in Excel (openpyxl)      |
 | OCR          | Future: riconoscimento documenti per PDF scannerizzati (fase successiva)             |
-| Hosting      | IIS / Azure App Service (frontend) + Strapi server                                 |
+| Hosting      | Qualsiasi server Python (Linux/Windows) + Strapi server (se utilizzato)            |
    
 <p><b>Tecnologie esplicitamente escluse dalla Fase 1:</b> OpenCV (computer vision), OCR per PDF scannerizzati. Saranno introdotte in fasi successive.</p>
 </details>
@@ -189,7 +190,7 @@ DIBRIS – Università di Genova. Scuola Politecnica, Corso di Ingegneria del So
     • I nomi dei materiali nel DB sono in inglese<br>
     • L'unità di massa standard è il milligrammo (mg)<br>
     • Il sistema opera su soli componenti C1 (componenti a livello PCB) in Fase 1<br>
-    • Lo sviluppo è in .NET e C#<br>
+    • Lo sviluppo è in Python 3.11+<br>
     • I reference designator seguono lo standard IEEE/ANSI ma devono gestire varianti specifiche dei CAD<br>
     • La categoria EEC è distinta dal reference designator: un reference designator (es. "R") identifica il tipo di componente (resistore), mentre la categoria EEC (es. 12 "Resistors") ne definisce la classificazione merceologica. Più designator possono appartenere alla stessa categoria EEC. Questa distinzione è necessaria perché la BOM fornisce il designator, ma il sistema deve poter classificare e raggruppare i componenti per categoria EEC a fini di analisi dei materiali.<br>
     • Per ogni componente deve essere registrato il tipo di montaggio: SMT (Surface-Mount Technology, componente saldato sulla superficie della PCB) o THT (Through-Hole Technology, componente con piedini passanti attraverso fori nella PCB). Questa informazione è rilevante per le successive fasi di disassemblaggio e trattamento.
@@ -215,11 +216,11 @@ DIBRIS – Università di Genova. Scuola Politecnica, Corso di Ingegneria del So
                                  └── [Logger di Audit (base)]
 
 Pipeline Dati:
-  BOM Excel → [Parser EPPlus] → Strapi API POST → PostgreSQL (elenco componenti)
-  MDF PDF → [Estrazione Testo PdfPig] → [API Claude AI] → JSON → Strapi API POST → PostgreSQL (materiali)
+  BOM Excel → [Parser openpyxl] → SQLite / Strapi API → PostgreSQL (elenco componenti)
+  MDF PDF → [Estrazione Testo pdfplumber] → [API DeepSeek AI] → JSON → SQLite / Strapi API → PostgreSQL (materiali)
   MDF PDF → [Inserimento Manuale via UI] → Strapi API POST → PostgreSQL (materiali)
     </pre>
-    <p>Strapi funge da backend API, esponendo REST API automatiche per ogni Collection Type. La logica di business (import BOM, validazione) risiede nel frontend o in servizi separati che chiamano le API Strapi. La pipeline MDF supporta sia l'inserimento manuale che (in futuro) l'estrazione assistita da AI con un passo Excel intermedio opzionale per la verifica dei dati.</p>
+    <p>Il sistema utilizza una pipeline CLI Python (ariadne-py) per l'import BOM. I dati sono memorizzati localmente in SQLite e opzionalmente sincronizzati su Strapi API + PostgreSQL quando configurato. La pipeline MDF supporta sia l'inserimento manuale che l'estrazione assistita da AI con un passo Excel intermedio opzionale per la verifica dei dati.</p>
 
 </details>
 
@@ -229,7 +230,7 @@ Pipeline Dati:
     <summary> Interfacce esterne e punti di interazione </summary>
     <p>
     • <b>Interfaccia Utente:</b> UI web accessibile via browser per inserimento dati, importazione e interrogazioni<br>
-    • <b>Import File:</b> Caricamento BOM Excel tramite EPPlus; caricamento MDF PDF (per futuro processing AI)<br>
+    • <b>Import File:</b> Caricamento BOM Excel tramite openpyxl; caricamento MDF PDF (per processing AI tramite pdfplumber + DeepSeek)<br>
     • <b>Interfaccia API:</b> Endpoint REST per gestione dispositivi, import BOM, inserimento dati materiali, interrogazioni<br>
     • <b>Interfaccia Database:</b> API REST Strapi (CRUD automatiche) per storage persistente su PostgreSQL<br>
     • <b>Export Excel (opzionale):</b> Export intermedio per verifica manuale dati MDF prima del commit nel DB<br>
@@ -394,13 +395,11 @@ Lo schema seguente definisce i Collection Types Strapi per la Fase 1: memorizzaz
     (3) Inserisce nome materiale (inglese), CASRN, massa (mg) tramite UI web<br>
     (4) Il sistema valida il formato CASRN e memorizza i dati in PostgreSQL (via Strapi)</p>
     
-    <p><b>Approccio B — Estrazione Assistita da AI (implementato):</b><br>
-    (1) PdfPig estrae il testo dalla MDF PDF<br>
-    (2) Il testo viene inviato all'API Claude AI (Anthropic) con un system prompt per l'estrazione BOM<br>
-    (3) Claude restituisce un array JSON di oggetti BOMEntryDto<br>
-    (4) Il JSON viene parsato e validato (mapping designator → categoria EEC)<br>
-    (5) I dati vengono scritti in PostgreSQL tramite Strapi API<br>
-    (6) Questo è il percorso automatizzato principale per l'elaborazione MDF basata su PDF</p>
+    <p><b>Approccio B — Estrazione Assistita da AI (futuro):</b><br>
+    (1) L'AI estrae il testo dalla MDF PDF tramite API LLM<br>
+    (2) Restituisce JSON strutturato con i dati dei materiali<br>
+    (3) Il JSON viene parsato e validato<br>
+    (4) I dati vengono scritti in PostgreSQL tramite Strapi API</p>
     
     <p><b>Approccio C — AI Diretto a PostgreSQL (via Strapi) (futuro):</b><br>
     (1) L'AI estrae e valida i dati automaticamente con modelli a maggiore accuratezza<br>
@@ -564,179 +563,227 @@ JOIN Material m ON cm.MaterialId = m.MaterialId
 
 </details>
 
-## <a name="bom-import-design"></a> 6 Progettazione BOM Import Service
+## <a name="bom-import-design"></a> 6 Progettazione Pipeline BOM (Python)
 
 <details>
-    <summary> Specifica del servizio di importazione BOM .NET (Excel + PDF via Claude AI) → Strapi API </summary>
+    <summary> Specifica della pipeline BOM Python (Excel via openpyxl + PDF via DeepSeek AI) → SQLite / Strapi API </summary>
 
-### 6.1 Architettura del Servizio
+### 6.1 Architettura della Pipeline
 
 ```
 ┌─────────────┐     ┌──────────────────┐     ┌─────────────┐     ┌──────────────┐
-│ BOM Excel   │────▶│ BOMImportService │────▶│ StrapiClient│────▶│ Strapi API   │
-│ (.xlsx)     │     │ (.NET / C#)      │     │ (API Key)   │     │ (REST)       │
+│ BOM Excel   │────▶│ Orchestrator     │────▶│ Database    │────▶│ SQLite /     │
+│ (.xlsx)     │     │ (Python)         │     │ (SQLite)    │     │ Strapi API   │
 └─────────────┘     └──────────────────┘     └─────────────┘     └──────┬───────┘
                            │                                            │
 ┌─────────────┐            │                                            ▼
-│ MDF PDF     │──▶PdfPig──▶│ Claude API ──▶ JSON parse                  │
-│ (.pdf)      │   Extract  │ (Anthropic)   BOMEntryDto                  │
+│ MDF PDF     │──▶pdfplumber│ DeepSeek API ──▶ JSON parse               │
+│ (.pdf)      │   Extract  │                BOMEntry (Pydantic)         │
 └─────────────┘            │                                            ▼
                      ┌──────────────┐                           ┌──────────────┐
-                     │ Validazione   │                           │ PostgreSQL   │
-                     │ Designator    │                           │ (Collection  │
-                     │ Categoria EEC │                           │ Types)       │
+                     │ Validazione   │                           │ SQLite DB    │
+                     │ Designator    │                           │ (locale) /   │
+                     │ Categoria EEC │                           │ PostgreSQL   │
                      └──────────────┘                           └──────────────┘
 ```
 
-### 6.2 Classi Principali
+### 6.2 Moduli Principali
 
-**Program.cs** — punto di ingresso CLI:
+**main.py** — punto di ingresso CLI (click):
+- `ariadne process <file> [--brand] [--model] [--manufacturer] [--year]` — elabora file BOM
+- `ariadne stats` — mostra statistiche database
 - Rileva automaticamente il formato file (.xlsx / .pdf) dall'estensione
-- Supporta flag CLI: `--brand`, `--model`, `--manufacturer`, `--year` per creazione automatica dispositivi
-- Se forniti `--brand`/`--model`, chiama `FindOrCreateDeviceAsync()` per creare o recuperare il dispositivo
-- Distribuisce al flusso di import appropriato
+- Crea un modello `Device` Pydantic dai flag CLI e invia a `Orchestrator`
 
-**BOMImportService** — orchestratore del processo:
-- `FindOrCreateDeviceAsync(DeviceDto)` → `string?` (documentId) — verifica se il dispositivo esiste, lo crea se non esiste
-- `ImportBomAsync(Stream excelStream, string? deviceDocumentId, string userId)` → `BomImportResult` (flusso Excel)
-- `ImportBomFromEntriesAsync(List<BOMEntryDto> entries, string? deviceDocumentId, string userId)` → `BomImportResult` (flusso PDF)
-- Legge il file Excel con EPPlus, valida la struttura delle colonne
-- Per ogni riga: classifica il componente (DesignatorValidator), mappa la categoria EEC
+**Orchestrator** — coordinatore del processo (ariadne/orchestrator.py):
+- `process_file(file_path, device)` → `ImportResult` — smista a flusso Excel o PDF
+- `_process_excel(file_path, device)` — chiama `parse_excel_bom()` (openpyxl), poi `_import_entries()`
+- `_process_pdf(file_path, device)` — chiama `extract_text_from_pdf()` (pdfplumber), poi `DeepSeekClient.extract_bom()`, poi `_import_entries()`
+- `_import_entries(entries, device)` — logica condivisa: crea/recupera dispositivo in SQLite, inserisce BOM entries
 
-**PdfExtractor** — estrazione testo da PDF:
-- `ExtractText(string pdfPath)` → `string`
-- Usa PdfPig (OpenSource) per estrazione testo nativa da PDF
+**excel_parser.py** — parsing Excel BOM:
+- `parse_excel_bom(file_path)` → `list[BOMEntry]`
+- Usa openpyxl per leggere file `.xlsx`
+- Intestazioni riga 6, mapping 17 colonne, rilevamento automatico SMT/THT dalla colonna Package
+
+**pdf_extractor.py** — estrazione testo da PDF:
+- `extract_text_from_pdf(pdf_path)` → `str`
+- `extract_text_from_pdf_stream(stream)` → `str`
+- Usa pdfplumber per estrazione testo nativa da PDF
 - Restituisce testo separato per pagina (non gestisce PDF scannerizzati/immagini)
 
-**ClaudeClient** — integrazione API Claude:
-- `SendMessageAsync(string userMessage, string? systemPrompt)` → `string`
-- Comunica con l'API Anthropic (Claude Sonnet 4)
-- Restituisce array JSON di oggetti BOMEntryDto
+**ai_client.py (DeepSeekClient)** — integrazione API DeepSeek:
+- `extract_bom(text, system_prompt)` → `list[BOMEntry]`
+- Comunica con l'API DeepSeek (`/v1/chat/completions`, compatibile OpenAI)
+- Restituisce lista parsata di modelli `BOMEntry` Pydantic
 
-**DesignatorValidator** — classifica il designator:
-- `GetDesignatorCode(string reference)` → `string`
-- Mappa il primo carattere del reference designator al codice standard
+**database.py** — wrapper database SQLite:
+- `find_or_create_device(device)` → `int` (device_id)
+- `insert_bom_entry(device_id, entry)` → `int` (entry_id)
+- `get_stats()` → `dict` con conteggi device/BOM/materiali
+- Usa SQLite tramite `sqlite3` (libreria standard)
 
-**EECClassifier** — mappa designator → categoria EEC:
-- `GetCategoryIdAsync(string designatorCode)` → `int`
-- Interroga Strapi /api/reference-designator per il mapping categoria
+**models.py** — modelli dati Pydantic:
+- `BOMEntry` — Item, Quantity, ReferenceDesignator, PartValue, Package, Manufacturer, ecc.
+- `Device` — Brand, ModelName, Manufacturer, YearOfProduction
+- `ImportResult` — TotalRows, ImportedRows, FailedRows, Success (calcolato)
 
-**StrapiClient** — wrapper HTTP per le API Strapi:
-- `PostAsync<T>(string endpoint, T data)` → `ApiResponse` — serializza `data` direttamente (no double-wrapping; i chiamanti passano il payload completo `{ data = ... }`)
-- `GetAsync<T>(string endpoint, Dictionary filters)` → `ApiResponse`
-- `PutAsync<T>(string endpoint, int id, object data)` → `ApiResponse`
-- `DeleteAsync(string endpoint, int id)` → `bool`
-- Autenticazione tramite API Key (header `Authorization: Bearer <token>`) — **opzionale**: se il token è vuoto o inizia con `<`, l'header viene saltato (si affida ai permessi CRUD del ruolo Public)
-- Le risposte di errore includono il body completo dell'errore Strapi in `Console.Error` per il debug
+**sftp_client.py** — upload SFTP (paramiko):
+- `upload_file(local_path, remote_name)` → `str` (percorso remoto)
+- Supporto context manager
 
-**BomImportResult** — risultato dell'import:
-- `bool Success`
-- `int TotalRows`
-- `int ImportedRows`
-- `int FailedRows`
-- `List<string> Warnings`
-- `List<string> Errors`
+**config.py** — configurazione da ambiente:
+- `AppConfig` → `DeepSeekConfig`, `StrapiConfig`, `SFTPConfig`, `DatabaseConfig`
+- Carica automaticamente file `.env` tramite python-dotenv
 
 ### 6.3 Flusso di Esecuzione — Excel
 
 ```
-1. Carica file BOM (.xlsx)
-2. Valida colonne attese (Item, Quantity, Reference, Part/Value, Package, Manufacturer)
-3. Per ogni riga:
-   a. Leggi Reference Designator (es. "C1,C5,C7...")
-   b. Determina DesignatorCode (es. "C") tramite DesignatorValidator
-   c. Ottieni EEC_CategoryId da ReferenceDesignator su Strapi
-   d. Costruisci payload BOMEntry JSON (con relazione device via documentId)
-   e. POST /api/bom-entry (collegato al Device via documentId)
-4. Se flag CLI --brand/--model forniti: FindOrCreateDeviceAsync() → crea/recupera dispositivo
-5. Registra entry audit → POST /api/audit-log
-6. Restituisci report di importazione
+1. Carica file BOM (.xlsx) via openpyxl
+2. Parsa intestazioni riga 6, itera righe dati (min_row=7)
+3. Per ogni riga con Item valido:
+   a. Leggi valori celle per indice colonna:
+      - Col 1: Item (int)
+      - Col 2: Qty (int)
+      - Col 3: Reference (stringa)
+      - Col 5: Part/Value (opzionale)
+      - Col 9: Package → rileva SMT/THT (DIP/SIP/TO- → THT, altrimenti SMT)
+      - Col 10: Manufacturer (opzionale)
+      - Col 11: Mfr Order Code (opzionale, convertito in stringa)
+      - Col 12: Notes (opzionale)
+      - Col 13: Supplier 1 (opzionale)
+      - Col 14: Supplier 1 Order Code (opzionale)
+   b. Costruisci modello BOMEntry Pydantic
+4. Orchestrator._import_entries():
+   a. Database.find_or_create_device() → device_id
+   b. Per ogni entry: Database.insert_bom_entry(device_id, entry)
+5. Restituisci ImportResult
 ```
 
-### 6.4 Flusso di Esecuzione — PDF → Claude AI
+### 6.4 Flusso di Esecuzione — PDF → DeepSeek AI
 
 ```
-1. PdfExtractor.ExtractText(pdfPath) → testo grezzo
-2. ClaudeClient.SendMessageAsync(testoGrezzo, systemPrompt) → stringa JSON
-3. ParseClaudeResponse(json) → List<BOMEntryDto>
-4. Per ogni entry:
-   a. Valida DesignatorCode (DesignatorValidator)
-   b. Ottieni EEC_CategoryId da Strapi
-   c. POST /api/bom-entry
-5. Restituisci report di importazione
+1. pdf_extractor.extract_text_from_pdf(percorso_pdf) → testo grezzo separato per pagina
+2. DeepSeekClient.extract_bom(testo, system_prompt) → list[BOMEntry]
+3. Parsa risposta JSON DeepSeek → oggetti BOMEntry validati
+4. Orchestrator._import_entries():
+   a. Database.find_or_create_device() → device_id
+   b. Per ogni entry: Database.insert_bom_entry(device_id, entry)
+5. Restituisci ImportResult
 ```
 
 ### 6.5 Mapping Colonne Excel → BOMEntry
 
 La BOM Excel reale (`Scheda STM-Steval Spin3204 - Copia x Luca.xlsx`) ha **17 colonne** con intestazioni alla riga 6. Mapping:
 
-| Colonna Excel | Intestazione | Campo Strapi | Note |
-|---------------|-------------|-------------|------|
-| 1 | Item | itemNumber | Parsato via `int.TryParse` — salta righe non numeriche |
-| 2 | Qty | quantity | Parsato via `int.TryParse` |
-| 3 | Reference | referenceDesignator | Designator separati da virgola |
-| 5 | Part/Value | partValue | Valore del componente (es. 100 nF) |
-| 9 | Package | mountingType | Usato per rilevamento SMT/THT (DIP/SIP/TO- → THT, altrimenti SMT) |
+| Colonna Excel | Intestazione | Campo BOMEntry | Note |
+|---------------|-------------|----------------|------|
+| 1 | Item | item_number | int parse — salta righe non numeriche |
+| 2 | Qty | quantity | int parse |
+| 3 | Reference | reference_designator | Designator separati da virgola |
+| 5 | Part/Value | part_value | Valore del componente (es. 100 nF) |
+| 9 | Package | mounting_type | DIP/SIP/TO- → THT, altrimenti SMT |
 | 10 | Manufacturer | manufacturer | Produttore del componente |
-| 11 | Mfr Order Code | manufacturerOrderCode | Codice ordinamento produttore |
+| 11 | Mfr Order Code | manufacturer_order_code | Stringa (celle int convertite automaticamente) |
 | 12 | Notes | notes | Note a testo libero |
-| 13 | Supplier | supplier1 | Primo fornitore |
-| 14 | Supplier Code | supplier1OrderCode | Catalogo fornitore 1 |
+| 13 | Supplier | supplier | Primo fornitore |
+| 14 | Supplier Code | supplier_order_code | Catalogo fornitore |
 
-Le colonne 4 (Description), 6 (Footprint), 7 (Quantità in stock), 8 (Prezzo unitario), 15-17 (dati fornitore aggiuntivi) sono presenti nel file ma non mappate ai campi Strapi.
+Le colonne 4 (Description), 6 (Footprint), 7 (Quantità in stock), 8 (Prezzo unitario), 15-17 (dati fornitore aggiuntivi) sono presenti nel file ma non mappate.
 
-### 6.6 Endpoint Strapi Utilizzati
+### 6.6 Schema Database (SQLite)
 
-| Metodo | Endpoint | Descrizione |
-|--------|----------|-------------|
-| GET | /api/device?filters[modelName][$eq]=... | Verifica esistenza Device |
-| POST | /api/device | Crea nuovo Device |
-| POST | /api/bom-entry | Crea BOMEntry (con device + eecCategory via documentId) |
-| GET | /api/reference-designator?populate=eecCategory&filters[designatorCode][$eq]=... | Ottieni categoria EEC per designator |
-| POST | /api/audit-log | Registra operazione (con device via documentId) |
+```sql
+CREATE TABLE device (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    brand TEXT NOT NULL DEFAULT '',
+    model_name TEXT NOT NULL DEFAULT '',
+    manufacturer TEXT NOT NULL DEFAULT '',
+    year_of_production INTEGER,
+    notes TEXT
+);
 
-**Nota:** Strapi v5 usa percorsi API **singolari** (`/api/device`, non `/api/devices`). Le relazioni nei payload POST usano il formato `{ "documentId": "xxx" }` — gli ID interi grezzi causano errori 400.
-
-### 6.7 Test Unitari (xUnit)
-
-Progetto `BomImportService.Tests` con **62 test**:
-
-| Classe Test | # Test | Cosa verifica |
-|------------|--------|---------------|
-| DesignatorValidatorTests | 10 | Mapping designator → codice |
-| PdfExtractorTests | 4 | Estrazione testo PDF, eccezioni |
-| BomEntryParsingTests | 9 | Parsing righe Excel, mounting type |
-| ClaudeClientTests | 7 | Serializzazione request/response, errori |
-| ExcelParsingTests | 4 | Lettura Excel reale, righe vuote |
-
-### 6.8 DeviceDto
-
-```csharp
-public class DeviceDto
-{
-    public string Brand { get; set; } = string.Empty;
-    public string ModelName { get; set; } = string.Empty;
-    public string Manufacturer { get; set; } = string.Empty;
-    public int YearOfProduction { get; set; }
-    public string? Notes { get; set; }
-}
+CREATE TABLE bom_entry (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    device_id INTEGER NOT NULL,
+    item_number INTEGER NOT NULL,
+    quantity INTEGER NOT NULL,
+    reference_designator TEXT NOT NULL,
+    part_value TEXT,
+    package TEXT,
+    manufacturer TEXT,
+    manufacturer_order_code TEXT,
+    supplier TEXT,
+    supplier_order_code TEXT,
+    notes TEXT,
+    mounting_type TEXT NOT NULL DEFAULT 'SMT',
+    designator_code TEXT,
+    eec_category_id INTEGER,
+    FOREIGN KEY (device_id) REFERENCES device(id)
+);
 ```
 
-Utilizzato da `FindOrCreateDeviceAsync()` per la creazione automatica dispositivi tramite flag CLI.
+### 6.7 Test Unitari (pytest)
+
+Test suite in `ariadne-py/tests/` usando **pytest**:
+
+| File Test | # Test | Cosa verifica |
+|-----------|--------|---------------|
+| test_models.py | 6 | Default BOMEntry, modello completo, default Device, ImportResult success/failure |
+| test_excel_parser.py | 3 | Rilevamento mounting type (SMT, THT, sconosciuto) |
+| test_ai_client.py | 3 | Parsing risposta DeepSeek (JSON, markdown-fenced, campi null) |
+
+### 6.8 Modelli Pydantic
+
+```python
+class BOMEntry(BaseModel):
+    item_number: int
+    quantity: int
+    reference_designator: str
+    part_value: str | None = None
+    package: str | None = None
+    manufacturer: str | None = None
+    manufacturer_order_code: str | None = None
+    supplier: str | None = None
+    supplier_order_code: str | None = None
+    notes: str | None = None
+    mounting_type: str = "SMT"
+    designator_code: str | None = None
+    eec_category_id: int | None = None
+
+class Device(BaseModel):
+    brand: str = ""
+    model_name: str = ""
+    manufacturer: str = ""
+    year_of_production: int | None = None
+    notes: str | None = None
+
+class ImportResult(BaseModel):
+    total_rows: int = 0
+    imported_rows: int = 0
+    failed_rows: int = 0
+    success: bool = True  # calcolato: success = (failed_rows == 0)
+    warnings: list[str] = Field(default_factory=list)
+    errors: list[str] = Field(default_factory=list)
+```
 
 ### 6.9 Uso CLI
 
 ```
-BomImportService <file> [--brand X] [--model X] [--manufacturer X] [--year N]
+ariadne process <file> [--brand X] [--model X] [--manufacturer X] [--year N]
 
   .xlsx  — import diretto da Excel
-  .pdf   — estrazione via Claude AI → Strapi
+  .pdf   — estrazione via DeepSeek AI → DB
 
 Options:
-  --brand         Marca del dispositivo (es. STMicroelectronics)
+  --brand         Marca del dispositivo (es. STM)
   --model         Modello del dispositivo (es. STEVAL-SPIN3204)
   --manufacturer  Produttore del dispositivo
   --year          Anno di produzione
+```
+
+```
+ariadne stats  — Mostra statistiche database (conteggi device/BOM/materiali)
 ```
 
 </details>
@@ -744,11 +791,11 @@ Options:
 ## <a name="export-tool"></a> 7 Strumento Export Database
 
 <details>
-    <summary> Strumento CLI per esportare il database Strapi in Excel </summary>
+    <summary> Strumento CLI per esportare il database in Excel (importato da versione C#, da riscrivere in Python) </summary>
 
 ### 7.1 Panoramica
 
-Uno strumento CLI autonomo (`src/main/Tools/`) esporta tutti i dati Strapi in un workbook Excel formattato con 6 fogli.
+L'attuale tool di export (`src/main/Tools/`, C# con EPPlus) esporta i dati Strapi in un workbook Excel formattato con 6 fogli. Un equivalente Python tramite openpyxl è pianificato.
 
 ### 7.2 Fogli Generati
 
@@ -761,18 +808,11 @@ Uno strumento CLI autonomo (`src/main/Tools/`) esporta tutti i dati Strapi in un
 | Devices | Tutti i dispositivi/PCB |
 | Audit Logs | Storico operazioni di import |
 
-### 7.3 Architettura
+### 7.3 Architettura (versione C# corrente)
 
 - Usa `HttpClient` per recuperare tutti i dati dall'API REST Strapi con paginazione
 - Usa EPPlus per generare Excel con intestazioni formattate (sfondo blu, testo bianco)
 - Output in `exports/StrapiExport_YYYYMMDD_HHmmss.xlsx`
 - Apre automaticamente il file generato al termine
-
-### 7.4 Esecuzione
-
-```bash
-cd src/main/Tools
-dotnet run
-```
 
 </details>

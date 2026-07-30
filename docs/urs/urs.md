@@ -15,7 +15,7 @@ Tropeano Luca
 | 1.1     | 28/06/2026 | Tropeano | Revision after Rosario's feedback — scope focused on C1 components only            |
 | 1.2     | 02/07/2026 | Tropeano | Rosario feedback revision v2: C1 defined, SMT/THT, RoHS, predictive algorithms, URS/DRS alignment |
 | 1.3     | 02/07/2026 | Tropeano | Strapi integration: switched from direct SQL Server to Strapi headless CMS + PostgreSQL, all DB access via REST API |
-| 1.4     | 22/07/2026 | Tropeano | PDF→Claude AI extraction implemented (FR10, NFR6 updated), device linking/auto-creation (FR8), Excel column mapping corrected, API token optional, export tool added, CLI flags --brand/--model/--manufacturer/--year |
+| 1.4     | 22/07/2026 | Tropeano | PDF AI extraction implemented (FR10, NFR6 updated), device linking/auto-creation (FR8), Excel column mapping corrected, API token optional, export tool added, CLI flags --brand/--model/--manufacturer/--year |
 
 # Index
 
@@ -245,7 +245,7 @@ The system supports standard reference designators according to IEEE/ANSI conven
 
 | ID   | Description                                                                                                                                                                                           | Priority |
 | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| FR1  | The system shall import BOM files, initially in Excel format (via EPPlus) for the testing/verification phase, to obtain a list of C1 components. After the initial phase, direct import from other sources may replace the Excel step — Excel is never used as persistent storage | M        |
+| FR1  | The system shall import BOM files, initially in Excel format (via openpyxl) for the testing/verification phase, to obtain a list of C1 components. After the initial phase, direct import from other sources may replace the Excel step — Excel is never used as persistent storage | M        |
 | FR2  | The system shall support BOM columns: Item, Quantity, Reference Designator, Part Value, Manufacturer, Manufacturer Order Code, Supplier 1/2/3, Supplier 1/2/3 Order Codes                             | M        |
 | FR3  | The system shall use the EEC 16-category index to classify each component in the BOM. The EEC category must be compared with the designator column in the BOM (if present); otherwise it must be assigned automatically — it must always be present                       | M        |
 | FR4  | The system shall support standard reference designators (IEEE/ANSI, 55+ types) for component identification                                                                                                                                                           | M        |
@@ -254,13 +254,13 @@ The system supports standard reference designators according to IEEE/ANSI conven
 | FR7  | The system shall support recording up to 3 suppliers per component with their respective catalog numbers, to facilitate MDF retrieval                                                                   | O        |
 | FR8  | The system shall store device/PCB metadata: brand, model name, manufacturer, year of production. Devices are automatically created or retrieved during BOM import via CLI flags (--brand, --model, --manufacturer, --year), or linked to existing devices by model name | M        |
 | FR9  | The system shall allow queries for: **which** materials, **how many** (mass), and **where** (component/designator) they are located in a device                                                         | M        |
-| FR10 | The system shall support an **optional intermediate Excel export** for manual verification of AI-extracted MDF data before loading into the SQL DB. The current implementation uses Claude AI (Anthropic) for BOM extraction from PDF text, with results written directly to Strapi API (Note: OCR for scanned PDFs and advanced MDF parsing are planned for future phases) | D        |
+| FR10 | The system shall support an **optional intermediate Excel export** for manual verification of AI-extracted MDF data before loading into the SQL DB. The current implementation uses DeepSeek AI for BOM extraction from PDF text, with results written to SQLite (local) and optionally synced to Strapi API (Note: OCR for scanned PDFs and advanced MDF parsing are planned for future phases) | D        |
 | FR11 | The system shall be a web application accessible via browser                                                                                                                                           | M        |
 | FR12 | The system shall integrate with the Ariadne data platform for data exchange and future expansion to C2/C3                                                                                             | M        |
 | FR13 | The system shall allow manual entry of component data for products without a digital BOM                                                                                                               | D        |
 | FR14 | The system shall support the use of average/estimated material composition data for components where the original MDF is not available, based on data from similar known components. This will enable predictive algorithms (future development) for estimating composition of components without direct MDF sourcing | D |
 
-**Note on AI/LLM, OpenCV, disassembly assistance, sorting containers, and market values:** Claude AI (Anthropic) is currently integrated for BOM extraction from text-based PDFs. OCR for scanned PDFs, OpenCV computer vision, disassembly assistance, sorting containers, and market values are intentionally excluded from Phase 1 and will be developed in subsequent phases of the Ariadne platform roadmap.
+**Note on AI/LLM, OpenCV, disassembly assistance, sorting containers, and market values:** DeepSeek AI is currently integrated for BOM extraction from text-based PDFs. OCR for scanned PDFs, OpenCV computer vision, disassembly assistance, sorting containers, and market values are intentionally excluded from Phase 1 and will be developed in subsequent phases of the Ariadne platform roadmap.
 
 <a id="sp3.3"></a>
 
@@ -269,11 +269,11 @@ The system supports standard reference designators according to IEEE/ANSI conven
 | ID   | Description                                                                                                              | Priority |
 | ---- | ------------------------------------------------------------------------------------------------------------------------ | -------- |
 | NFR1 | The system shall be easy to use for data entry and queries                                                              | M        |
-| NFR2 | The system shall allow updates to devices, BOMs, and materials via Excel import (EPPlus)                                | M        |
+| NFR2 | The system shall allow updates to devices, BOMs, and materials via Excel import (openpyxl)                                | M        |
 | NFR3 | The system shall ensure consistency and correctness of material information (validation upon import)                     | M        |
 | NFR4 | The system shall store material masses in mg (milligrams) as the standard unit of measure                                | M        |
 | NFR5 | The system shall be scalable to support 1000+ device models and all 16 EEC categories                                   | D        |
-| NFR6 | The system shall support integration with external systems, including AI modules for MDF parsing (Claude API currently implemented for BOM extraction; advanced MDF parsing for subsequent phases) | D        |
+| NFR6 | The system shall support integration with external systems, including AI modules for MDF parsing (DeepSeek API currently implemented for BOM extraction; advanced MDF parsing for subsequent phases) | D        |
 | NFR7 | Material names in the DB shall be in English                                                                             | M        |
 
 <a id="sp3.4"></a>
