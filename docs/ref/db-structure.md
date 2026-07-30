@@ -1,10 +1,10 @@
 # Struttura del Database — Sistema Ariadne di Recupero Materiali (Fase 1)
 
-**VERSIONE : 1.4** | **Data:** 22/07/2026 | **Autore:** Tropeano Luca
+**VERSIONE : 1.5** | **Data:** 29/07/2026 | **Autore:** Tropeano Luca
 
 ## Piattaforma
 
-Database gestito tramite **Strapi** (headless CMS, https://strapi.io/). L'accesso avviene esclusivamente tramite **API REST** esposte da Strapi — nessun accesso diretto al database sottostante.
+Database gestito tramite **Strapi** (headless CMS) oppure **SQLite locale** (Python pipeline). L'accesso avviene tramite **API REST** di Strapi (quando configurato) o direttamente via SQLite (modalità locale).
 
 I file Excel (.xlsx) sono usati solo come **formato di input** per l'importazione BOM e opzionalmente per la verifica intermedia dei dati MDF.
 
@@ -202,51 +202,50 @@ POST /api/component-material
 ## Pipeline Dati MDF
 
 ```
-┌──────────┐    ┌──────────┐    ┌───────────────────┐
-│ BOM Excel│───▶│ EPPlus   │───▶│ Strapi API (POST) │
-│ (.xlsx)  │    │ Parser   │    │ → Collection Type  │
-└──────────┘    └──────────┘    └────────┬──────────┘
-                                         │
-                                         ▼
-                                ┌──────────────────┐
-                     ┌──────────│  MDF PDF (input)  │
-                     │          └────────┬─────────┘
-                     ▼                   ▼
-           ┌─────────────────┐  ┌─────────────────┐
-           │ Inserimento     │  │ PdfPig          │
-           │ Manuale (via UI)│  │ (text extraction)│
-           └────────┬────────┘  └────────┬────────┘
-                    │                    ▼
-                    │          ┌──────────────────────┐
-                    │          │ Claude AI API         │
-                    │          │ (BOM extraction)      │
-                    │          └──────────┬───────────┘
-                    │                     ▼
-                    │          ┌──────────────────────┐
-                    │          │ JSON → BOMEntryDto    │
-                    │          │ (validazione)         │
-                    │          └──────────┬───────────┘
-                    ▼                     ▼
-           ┌──────────────────────────────────────┐
-           │         Strapi API                    │
-           │  (POST/PUT → Collection Types)        │
-           │  BOMEntry + ComponentMaterial         │
-           └──────────────────────────────────────┘
-                    │
-                    ▼
-           ┌──────────────────────────────────────┐
-           │         PostgreSQL                    │
-           │  (query "quali/quanti/dove")          │
-           └──────────────────────────────────────┘
+┌──────────┐    ┌──────────────┐    ┌──────────────────────┐
+│ BOM Excel│───▶│ openpyxl     │───▶│ SQLite / Strapi      │
+│ (.xlsx)  │    │ Parser       │    │ → Collection Type     │
+└──────────┘    └──────────────┘    └────────┬─────────────┘
+                                             │
+                                             ▼
+                                    ┌──────────────────┐
+                         ┌──────────│  MDF PDF (input)  │
+                         │          └────────┬─────────┘
+                         ▼                   ▼
+               ┌─────────────────┐  ┌──────────────────┐
+               │ Inserimento     │  │ pdfplumber        │
+               │ Manuale (via UI)│  │ (text extraction)  │
+               └────────┬────────┘  └────────┬─────────┘
+                        │                    ▼
+                        │          ┌──────────────────────┐
+                        │          │ DeepSeek AI API       │
+                        │          │ (BOM extraction)      │
+                        │          └──────────┬───────────┘
+                        │                     ▼
+                        │          ┌──────────────────────┐
+                        │          │ JSON → BOMEntry       │
+                        │          │ (validazione Pydantic)│
+                        │          └──────────┬───────────┘
+                        ▼                     ▼
+               ┌──────────────────────────────────────────┐
+               │       SQLite (locale) / Strapi API        │
+               │  (INSERT → device + bom_entry tables)     │
+               └──────────────────────────────────────────┘
+                        │
+                        ▼
+               ┌──────────────────────────────────────────┐
+               │       SQLite DB / PostgreSQL              │
+               │  (query "quali/quanti/dove")              │
+               └──────────────────────────────────────────┘
 ```
 
 **Flussi implementati:**
-1. **Excel → Strapi** (BOM Import): `BOMImportService.ImportBomAsync()` — parsing EPPlus → validazione designator → Strapi API
-2. **PDF → Claude → Strapi** (AI Extraction): `PdfExtractor` + `ClaudeClient` → `ImportBomFromEntriesAsync()` — PdfPig estrae testo, Claude estrae JSON BOM, salvataggio su Strapi
-3. **Inserimento manuale** (via Admin UI o API): accesso diretto ai Collection Type
-4. **Export Strapi → Excel**: StrapiExport tool — API REST con paginazione → EPPlus → 6 fogli Excel
+1. **Excel → DB** (BOM Import): `Orchestrator._process_excel()` → `parse_excel_bom()` (openpyxl) → `Database.insert_bom_entry()`
+2. **PDF → DeepSeek → DB** (AI Extraction): `extract_text_from_pdf()` (pdfplumber) + `DeepSeekClient.extract_bom()` → `Orchestrator._import_entries()` → SQLite
+3. **Inserimento manuale** (via Admin UI o API): accesso diretto ai Collection Type Strapi (se configurato)
+4. **Export database → Excel**: export tool tramite openpyxl — dati da SQLite/Strapi API
 
 **Note implementative:**
-- **EECClassifier query**: usa formato query string diretto `filters[designatorCode][$eq]=X&populate=eecCategory` — non serializzazione oggetti annidati
-- **StrapiClient PostAsync**: serializza il payload direttamente (no double-wrapping) — i chiamanti passano il payload completo `{ data = ... }`
-- **StrapiClient errore**: in caso di risposta non riuscita, il body completo dell'errore viene stampato in Console.Error per il debug
+- **EECClassifier**: query al database locale o Strapi API per mapping designator → categoria EEC
+- **Database**: wrapper SQLite con connessione diretta (nessuna serializzazione JSON necessaria per operazioni locali)
+- **Strapi (opzionale)**: se configurato, i dati possono essere sincronizzati con Strapi API tramite variabili d'ambiente (`.env`)
