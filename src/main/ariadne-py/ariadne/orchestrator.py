@@ -48,21 +48,36 @@ class Orchestrator:
         entries = parse_pdf_bom_text(text)
         if entries:
             result.warnings.append(f"Direct parser extracted {len(entries)} components")
-            return self._import_entries(entries, device)
+            return self._import_entries(entries, device, result)
+
+        if not self._config.deepseek.enabled:
+            result.warnings.append(
+                "AI extraction is disabled (DEEPSEEK_ENABLED=false). "
+                "PDF could not be parsed without AI."
+            )
+            result.success = False
+            return result
 
         result.warnings.append("Direct parser found no entries, trying AI extraction...")
         try:
-            entries = self._ai.extract_bom(text)
-            result.warnings.append(f"AI extracted {len(entries)} components")
+            extraction = self._ai.extract_bom(text)
+            entries = extraction.entries
+            usage = extraction.usage
+            result.warnings.append(
+                f"AI extracted {len(entries)} components "
+                f"(tokens: {usage.total_tokens}, est. cost: ${usage.cost_usd:.5f})"
+            )
         except Exception as e:
             result.errors.append(f"AI extraction failed: {e}")
             result.success = False
             return result
 
-        return self._import_entries(entries, device)
+        return self._import_entries(entries, device, result)
 
-    def _import_entries(self, entries, device: Device) -> ImportResult:
-        result = ImportResult(total_rows=len(entries))
+    def _import_entries(self, entries, device: Device, result: ImportResult | None = None) -> ImportResult:
+        if result is None:
+            result = ImportResult()
+        result.total_rows = len(entries)
         device_id = self._db.find_or_create_device(device)
 
         for entry in entries:

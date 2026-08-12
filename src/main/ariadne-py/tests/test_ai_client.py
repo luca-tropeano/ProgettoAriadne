@@ -1,4 +1,6 @@
-from ariadne.ai_client import _parse_response
+import pytest
+
+from ariadne.ai_client import _parse_response, _parse_usage
 from ariadne.models import BOMEntry
 
 
@@ -23,3 +25,22 @@ def test_parse_null_fields():
     entries = _parse_response(raw)
     assert entries[0].part_value is None
     assert entries[0].manufacturer is None
+
+
+def test_parse_usage_counts():
+    usage = _parse_usage({"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150})
+    assert usage.prompt_tokens == 100
+    assert usage.completion_tokens == 50
+    assert usage.total_tokens == 150
+
+
+def test_parse_usage_empty():
+    usage = _parse_usage(None)
+    assert usage.total_tokens == 0
+    assert usage.cost_usd == 0.0
+
+
+def test_parse_usage_cost_positive():
+    usage = _parse_usage({"prompt_tokens": 1_000_000, "completion_tokens": 1_000_000})
+    assert usage.cost_usd == pytest.approx(0.42)
+    assert usage.total_tokens == 2_000_000

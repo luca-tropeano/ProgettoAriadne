@@ -6,7 +6,7 @@ DIBRIS – University of Genoa. Polytechnic School, Software Engineering Course 
 
 <div align='right'> <b> Authors </b> <br> Tropeano Luca </div>
 
-**VERSION : 1.5**
+**VERSION : 1.6**
 
 ### REVISION HISTORY
 
@@ -18,6 +18,7 @@ DIBRIS – University of Genoa. Polytechnic School, Software Engineering Course 
 | 1.3      | 02/07/2026 | Tropeano  | Strapi integration: replaced direct SQL Server with Strapi headless CMS + PostgreSQL, updated technology stack and architecture |
 | 1.4      | 22/07/2026 | Tropeano  | PDF AI extraction implemented, BOM Import Service updated with device auto-creation and CLI flags, Excel column mapping corrected (17 cols), API token optional, StrapiClient relation payloads fixed, export tool added, 62 xUnit tests passing, bootstrap auto-permissions |
 | 1.5      | 29/07/2026 | Tropeano  | Rewrite from C#/.NET to Python 3.11+. BOM processing pipeline: ariadne-py package with openpyxl (Excel), pdfplumber (PDF), DeepSeek AI, SQLite local DB, SFTP upload. pytest test suite. Architecture updated throughout. |
+| 1.6      | 12/08/2026 | Tropeano  | Direct PDF BOM parser (regex, no AI) added as primary path for text-based PDFs. DeepSeek AI demoted to paid fallback, disabled by default (DEEPSEEK_ENABLED), max_tokens 2000, token/cost logging per call. Claude/Anthropic references removed. 28 pytest tests passing. |
 
 ## Table of Contents
 
@@ -170,8 +171,8 @@ DIBRIS – University of Genoa. Polytechnic School, Software Engineering Course 
 | Frontend    | React (or other web framework via Strapi API)                                      |
 | Backend API | **Strapi** (headless CMS, automatic REST/GraphQL APIs)                             |
 | Database    | SQLite (local) / PostgreSQL (via Strapi)                                           |
-| BOM Import  | **Python CLI (ariadne-py)** — openpyxl (Excel parsing), pdfplumber (PDF text extraction) → SQLite / Strapi API |
-| AI/LLM      | **DeepSeek API** — BOM extraction from PDF text (implemented)                      |
+| BOM Import  | **Python CLI (ariadne-py)** — openpyxl (Excel parsing), pdfplumber + pdf_parser (PDF direct parsing) → SQLite / Strapi API |
+| AI/LLM      | **DeepSeek API** — paid fallback for PDF BOM extraction, disabled by default (DEEPSEEK_ENABLED) |
 | Testing     | **pytest** — unit tests covering BOM import, PDF extraction, designator validation |
 | Export Tool | **Ariadne Export** — CLI tool to export database to Excel (openpyxl)               |
 | OCR         | Future: document recognition for scanned PDFs (subsequent phase)                    |
@@ -219,7 +220,8 @@ DIBRIS – University of Genoa. Polytechnic School, Software Engineering Course 
 
 Data Pipeline:
   BOM Excel → [openpyxl Parser] → SQLite / Strapi API → PostgreSQL (component list)
-  MDF PDF → [pdfplumber Text Extraction] → [DeepSeek AI API] → JSON → SQLite / Strapi API → PostgreSQL (materials)
+  BOM PDF → [pdfplumber Text Extraction] → [pdf_parser Direct Parser] → SQLite / Strapi API (components)
+  BOM PDF → [pdfplumber] → [DeepSeek AI API — paid fallback, disabled by default] → JSON → SQLite / Strapi API
   MDF PDF → [Manual Entry via UI] → Strapi API POST → PostgreSQL (materials)
     </pre>
     <p>The system uses a Python CLI pipeline (ariadne-py) for BOM import. Data is stored locally in SQLite and optionally synced to Strapi API + PostgreSQL when configured. The MDF pipeline supports both manual entry and (in the future) AI-assisted extraction with an optional intermediate Excel step for data verification.</p>
@@ -232,7 +234,7 @@ Data Pipeline:
     <summary> External interfaces and interaction points </summary>
     <p>
     • <b>User Interface:</b> Web UI accessible via browser for data entry, import, and queries<br>
-    • <b>File Import:</b> BOM Excel upload via openpyxl; MDF PDF upload (for AI processing via pdfplumber + DeepSeek)<br>
+    • <b>File Import:</b> BOM Excel upload via openpyxl; BOM PDF upload (direct parser via pdfplumber, DeepSeek AI as paid fallback when enabled)<br>
     • <b>API Interface:</b> REST endpoints for device management, BOM import, material data entry, queries<br>
     • <b>Database Interface:</b> Strapi REST APIs (automatic CRUD) for persistent storage on PostgreSQL<br>
     • <b>Excel Export (optional):</b> Intermediate export for manual verification of MDF data before committing to DB<br>
@@ -568,7 +570,7 @@ WHERE d.ModelName = 'STEVAL-SPIN3204' AND m.CASRN = '7440-50-8'</pre>
 ## <a name="bom-import-design"></a> 6 BOM Processing Pipeline Design (Python)
 
 <details>
-    <summary> Specification of the Python BOM processing pipeline (Excel via openpyxl + PDF via DeepSeek AI) → SQLite / Strapi API </summary>
+    <summary> Specification of the Python BOM processing pipeline (Excel via openpyxl + PDF via direct parser / DeepSeek AI fallback) → SQLite / Strapi API </summary>
 
 ### 6.1 Pipeline Architecture
 
@@ -579,9 +581,12 @@ WHERE d.ModelName = 'STEVAL-SPIN3204' AND m.CASRN = '7440-50-8'</pre>
 └─────────────┘     └──────────────────┘     └─────────────┘     └──────┬───────┘
                            │                                            │
 ┌─────────────┐            │                                            ▼
-│ MDF PDF     │──▶pdfplumber│ DeepSeek API ──▶ JSON parse               │
-│ (.pdf)      │   Extract  │                BOMEntry (Pydantic)         │
-└─────────────┘            │                                            ▼
+│ MDF PDF     │──▶ pdfplumber ──▶ pdf_parser (regex) ──▶ BOMEntry  │
+│ (.pdf)      │   Extract     │  (primary, no AI)      (Pydantic)   │
+└─────────────┘            │                                            │
+                           │  └─ if 0 entries & DEEPSEEK_ENABLED=true    ▼
+                           │        └─▶ DeepSeek API ──▶ JSON parse │
+                           │                      BOMEntry + usage/cost │
                      ┌──────────────┐                           ┌──────────────┐
                      │ Validation   │                           │ SQLite DB    │
                      │ Designator   │                           │ (local) /    │
@@ -600,8 +605,8 @@ WHERE d.ModelName = 'STEVAL-SPIN3204' AND m.CASRN = '7440-50-8'</pre>
 **Orchestrator** — process coordinator (ariadne/orchestrator.py):
 - `process_file(file_path, device)` → `ImportResult` — dispatches to Excel or PDF flow
 - `_process_excel(file_path, device)` — calls `parse_excel_bom()` (openpyxl), then `_import_entries()`
-- `_process_pdf(file_path, device)` — calls `extract_text_from_pdf()` (pdfplumber), then `DeepSeekClient.extract_bom()`, then `_import_entries()`
-- `_import_entries(entries, device)` — shared logic: creates/retrieves device in SQLite, inserts BOM entries
+- `_process_pdf(file_path, device)` — calls `extract_text_from_pdf()` (pdfplumber), then tries `parse_pdf_bom_text()` (direct parser); if 0 entries and `deepseek.enabled` it falls back to `DeepSeekClient.extract_bom()`; then `_import_entries()`
+- `_import_entries(entries, device, result=None)` — shared logic: creates/retrieves device in SQLite, inserts BOM entries; keeps the base result so PDF warnings (AI cost) are preserved
 
 **excel_parser.py** — Excel BOM parsing:
 - `parse_excel_bom(file_path)` → `list[BOMEntry]`
@@ -614,10 +619,17 @@ WHERE d.ModelName = 'STEVAL-SPIN3204' AND m.CASRN = '7440-50-8'</pre>
 - Uses pdfplumber for native PDF text extraction
 - Returns page-separated text (does not handle scanned/image PDFs)
 
-**ai_client.py (DeepSeekClient)** — DeepSeek API integration:
-- `extract_bom(text, system_prompt)` → `list[BOMEntry]`
+**pdf_parser.py** — Direct BOM parser (no AI, primary path):
+- `parse_pdf_bom_text(text)` → `list[BOMEntry]`
+- Regex-based: recognizes standard designators (R, C, L, D, U, J, X, Q, SW, LED...), multiple designators per line (`C1,C5,C7`), `2x` quantities, values with units (`100nF`, `4.7k`, `2u2`)
+- Package detection from ~100+ known packages (0603, SOT-23, LQFP, QFN, SOIC; THT: DIP/SIP/TO-)
+- Manufacturer recognition, SMT/THT inference from package, page separator handling
+
+**ai_client.py (DeepSeekClient)** — DeepSeek API integration (paid fallback, disabled by default):
+- `extract_bom(text, system_prompt)` → `AIExtractionResult(entries, usage)`
 - Communicates with DeepSeek API (`/v1/chat/completions`, OpenAI-compatible)
-- Returns parsed list of `BOMEntry` pydantic models
+- `AIUsage` reports prompt/completion/total tokens + estimated USD cost per call (logged)
+- Only used when `DEEPSEEK_ENABLED=true` and the direct parser found nothing
 
 **database.py** — SQLite database wrapper:
 - `find_or_create_device(device)` → `int` (device_id)
@@ -662,16 +674,22 @@ WHERE d.ModelName = 'STEVAL-SPIN3204' AND m.CASRN = '7440-50-8'</pre>
 5. Return ImportResult
 ```
 
-### 6.4 Execution Flow — PDF → DeepSeek AI
+### 6.4 Execution Flow — PDF → Direct Parser / DeepSeek AI Fallback
 
 ```
 1. pdf_extractor.extract_text_from_pdf(pdf_path) → raw page-separated text
-2. DeepSeekClient.extract_bom(text, system_prompt) → list[BOMEntry]
-3. Parse DeepSeek JSON response → validated BOMEntry objects
-4. Orchestrator._import_entries():
+   If no text extracted → PDF is scanned/image, not supported yet (OCR/AI planned)
+2. pdf_parser.parse_pdf_bom_text(text) → list[BOMEntry]   (primary, free)
+   a. If entries found → go to step 5 (AI is NOT called)
+3. If parse_pdf_bom_text returned 0 entries:
+   a. If DEEPSEEK_ENABLED=false → fail with warning, no API call
+   b. If DEEPSEEK_ENABLED=true → DeepSeekClient.extract_bom(text, system_prompt)
+      → AIExtractionResult(entries, usage); cost/tokens logged in warnings
+4. Parse DeepSeek JSON response → validated BOMEntry objects
+5. Orchestrator._import_entries():
    a. Database.find_or_create_device() → device_id
    b. For each entry: Database.insert_bom_entry(device_id, entry)
-5. Return ImportResult
+6. Return ImportResult (warnings preserved)
 ```
 
 ### 6.5 Excel → BOMEntry Column Mapping
@@ -733,7 +751,9 @@ Test suite in `ariadne-py/tests/` using **pytest**:
 |-----------|---------|------------------|
 | test_models.py | 6 | BOMEntry defaults, full model, Device defaults, ImportResult success/failure |
 | test_excel_parser.py | 3 | Mounting type detection (SMT, THT, unknown) |
-| test_ai_client.py | 3 | DeepSeek response parsing (JSON, markdown-fenced, null fields) |
+| test_pdf_parser.py | 10 | Direct PDF BOM parsing (designators, quantities, packages, THT detection, manufacturer, real sample) |
+| test_ai_client.py | 6 | DeepSeek response parsing (JSON, markdown-fenced, null fields) + usage/cost tracking |
+| test_orchestrator.py | 5 | Excel/PDF flows, AI disabled by default, AI fallback when enabled |
 
 ### 6.8 Pydantic Models
 
@@ -775,7 +795,7 @@ class ImportResult(BaseModel):
 ariadne process <file> [--brand X] [--model X] [--manufacturer X] [--year N]
 
   .xlsx  — import diretto da Excel
-  .pdf   — estrazione via DeepSeek AI → DB
+  .pdf   — parser diretto (regex); fallback DeepSeek AI solo se DEEPSEEK_ENABLED=true
 
 Options:
   --brand         Device brand (e.g. STM)

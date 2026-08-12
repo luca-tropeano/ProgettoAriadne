@@ -16,10 +16,11 @@ class StrapiConfig:
 
 @dataclass
 class DeepSeekConfig:
+    enabled: bool = False
     api_key: str = ""
     model: str = "deepseek-chat"
     base_url: str = "https://api.deepseek.com"
-    max_tokens: int = 4096
+    max_tokens: int = 2000
 
 
 @dataclass
@@ -51,9 +52,11 @@ class AppConfig:
                 api_token=os.getenv("STRAPI_API_TOKEN", ""),
             ),
             deepseek=DeepSeekConfig(
+                enabled=_as_bool(os.getenv("DEEPSEEK_ENABLED", "false")),
                 api_key=os.getenv("DEEPSEEK_API_KEY", ""),
                 model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
                 base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+                max_tokens=int(os.getenv("DEEPSEEK_MAX_TOKENS", "2000")),
             ),
             sftp=SFTPConfig(
                 host=os.getenv("SFTP_HOST", ""),
@@ -66,3 +69,7 @@ class AppConfig:
                 url=os.getenv("DATABASE_URL", "sqlite:///ariadne.db"),
             ),
         )
+
+
+def _as_bool(value: str) -> bool:
+    return value.strip().lower() in ("1", "true", "yes", "y", "on")

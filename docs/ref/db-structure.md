@@ -209,7 +209,7 @@ POST /api/component-material
                                              │
                                              ▼
                                     ┌──────────────────┐
-                         ┌──────────│  MDF PDF (input)  │
+                         ┌──────────│  BOM PDF (input)  │
                          │          └────────┬─────────┘
                          ▼                   ▼
                ┌─────────────────┐  ┌──────────────────┐
@@ -218,8 +218,19 @@ POST /api/component-material
                └────────┬────────┘  └────────┬─────────┘
                         │                    ▼
                         │          ┌──────────────────────┐
+                        │          │ pdf_parser           │
+                        │          │ (parser diretto,     │
+                        │          │  regex, senza AI)    │
+                        │          └──────────┬───────────┘
+                        │                     ▼
+                        │          ┌──────────────────────┐
+                        │          │ 0 entries e          │
+                        │          │ DEEPSEEK_ENABLED=true?│
+                        │          └──────────┬───────────┘
+                        │              no     ▼      sì
+                        │          ┌──────────────────────┐
                         │          │ DeepSeek AI API       │
-                        │          │ (BOM extraction)      │
+                        │          │ (fallback a pagamento)│
                         │          └──────────┬───────────┘
                         │                     ▼
                         │          ┌──────────────────────┐
@@ -241,9 +252,10 @@ POST /api/component-material
 
 **Flussi implementati:**
 1. **Excel → DB** (BOM Import): `Orchestrator._process_excel()` → `parse_excel_bom()` (openpyxl) → `Database.insert_bom_entry()`
-2. **PDF → DeepSeek → DB** (AI Extraction): `extract_text_from_pdf()` (pdfplumber) + `DeepSeekClient.extract_bom()` → `Orchestrator._import_entries()` → SQLite
-3. **Inserimento manuale** (via Admin UI o API): accesso diretto ai Collection Type Strapi (se configurato)
-4. **Export database → Excel**: export tool tramite openpyxl — dati da SQLite/Strapi API
+2. **PDF → parser diretto → DB** (percorso primario, gratis): `extract_text_from_pdf()` (pdfplumber) + `parse_pdf_bom_text()` (regex) → `Orchestrator._import_entries()` → SQLite
+3. **PDF → DeepSeek AI → DB** (fallback a pagamento, disabilitato di default): usato solo se il parser diretto trova 0 entries e `DEEPSEEK_ENABLED=true`. Costo/token loggati ad ogni chiamata
+4. **Inserimento manuale** (via Admin UI o API): accesso diretto ai Collection Type Strapi (se configurato)
+5. **Export database → Excel**: export tool tramite openpyxl — dati da SQLite/Strapi API
 
 **Note implementative:**
 - **EECClassifier**: query al database locale o Strapi API per mapping designator → categoria EEC
