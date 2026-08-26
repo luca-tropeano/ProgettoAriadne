@@ -81,7 +81,14 @@ class Database:
         self._conn.commit()
         return cur.lastrowid
 
-    def insert_bom_entry(self, device_id: int, entry: BOMEntry) -> int:
+    def insert_bom_entry(self, device_id: int, entry: BOMEntry) -> int | None:
+        existing = self._conn.execute(
+            "SELECT id FROM bom_entry WHERE device_id = ? AND reference_designator = ?",
+            (device_id, entry.reference_designator),
+        ).fetchone()
+        if existing:
+            return None
+
         cur = self._conn.execute(
             "INSERT INTO bom_entry "
             "(device_id, item_number, quantity, reference_designator, part_value, "
@@ -101,6 +108,13 @@ class Database:
         row = self._conn.execute(
             "SELECT * FROM device WHERE model_name = ?",
             (model_name,),
+        ).fetchone()
+        return dict(row) if row else None
+
+    def get_device_by_id(self, device_id: int) -> dict | None:
+        row = self._conn.execute(
+            "SELECT * FROM device WHERE id = ?",
+            (device_id,),
         ).fetchone()
         return dict(row) if row else None
 

@@ -6,6 +6,8 @@ from ariadne.ai_client import DeepSeekClient
 from ariadne.config import AppConfig
 from ariadne.database import Database
 from ariadne.excel_parser import parse_excel_bom
+from ariadne.csv_parser import parse_csv_bom
+from ariadne.eec import classify_all
 from ariadne.models import Device, ImportResult
 from ariadne.pdf_extractor import extract_text_from_pdf
 from ariadne.pdf_parser import parse_pdf_bom_text
@@ -23,6 +25,8 @@ class Orchestrator:
 
         if ext in (".xlsx", ".xls"):
             return self._process_excel(file_path, device)
+        elif ext == ".csv":
+            return self._process_csv(file_path, device)
         elif ext == ".pdf":
             return self._process_pdf(file_path, device)
         else:
@@ -32,6 +36,10 @@ class Orchestrator:
 
     def _process_excel(self, file_path: str, device: Device) -> ImportResult:
         entries = parse_excel_bom(file_path)
+        return self._import_entries(entries, device)
+
+    def _process_csv(self, file_path: str, device: Device) -> ImportResult:
+        entries = parse_csv_bom(file_path)
         return self._import_entries(entries, device)
 
     def _process_pdf(self, file_path: str, device: Device) -> ImportResult:
@@ -82,8 +90,15 @@ class Orchestrator:
 
         for entry in entries:
             try:
-                self._db.insert_bom_entry(device_id, entry)
-                result.imported_rows += 1
+                if entry.eec_category_id is None:
+                    entry.eec_category_id = classify_all(entry.reference_designator)
+                entry_id = self._db.insert_bom_entry(device_id, entry)
+                if entry_id is None:
+                    result.warnings.append(
+                        f"Row {entry.item_number}: duplicate ({entry.reference_designator}), skipped"
+                    )
+                else:
+                    result.imported_rows += 1
             except Exception as e:
                 result.failed_rows += 1
                 result.errors.append(
