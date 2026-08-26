@@ -2,7 +2,7 @@
 
 ##### DIBRIS – University of Genoa. Polytechnic School, Software Engineering Course 80154
 
-**VERSION : 1.4**
+**VERSION : 1.5**
 
 **Authors**
 Tropeano Luca
@@ -16,6 +16,7 @@ Tropeano Luca
 | 1.2     | 02/07/2026 | Tropeano | Rosario feedback revision v2: C1 defined, SMT/THT, RoHS, predictive algorithms, URS/DRS alignment |
 | 1.3     | 02/07/2026 | Tropeano | Strapi integration: switched from direct SQL Server to Strapi headless CMS + PostgreSQL, all DB access via REST API |
 | 1.4     | 22/07/2026 | Tropeano | PDF AI extraction implemented (FR10, NFR6 updated), device linking/auto-creation (FR8), Excel column mapping corrected, API token optional, export tool added, CLI flags --brand/--model/--manufacturer/--year |
+| 1.5     | 12/08/2026 | Tropeano | CSV import support (FR9), EEC auto-classification (FR7), duplicate BOM check, DB→Excel export (FR14), DeepSeek AI as paid fallback. 47 tests, 350/350 components from 5 real BOMs. |
 
 # Index
 

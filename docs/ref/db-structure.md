@@ -1,6 +1,6 @@
 # Struttura del Database — Sistema Ariadne di Recupero Materiali (Fase 1)
 
-**VERSIONE : 1.5** | **Data:** 29/07/2026 | **Autore:** Tropeano Luca
+**VERSIONE : 1.6** | **Data:** 12/08/2026 | **Autore:** Tropeano Luca
 
 ## Piattaforma
 
@@ -252,10 +252,15 @@ POST /api/component-material
 
 **Flussi implementati:**
 1. **Excel → DB** (BOM Import): `Orchestrator._process_excel()` → `parse_excel_bom()` (openpyxl) → `Database.insert_bom_entry()`
-2. **PDF → parser diretto → DB** (percorso primario, gratis): `extract_text_from_pdf()` (pdfplumber) + `parse_pdf_bom_text()` (regex) → `Orchestrator._import_entries()` → SQLite
-3. **PDF → DeepSeek AI → DB** (fallback a pagamento, disabilitato di default): usato solo se il parser diretto trova 0 entries e `DEEPSEEK_ENABLED=true`. Costo/token loggati ad ogni chiamata
-4. **Inserimento manuale** (via Admin UI o API): accesso diretto ai Collection Type Strapi (se configurato)
-5. **Export database → Excel**: export tool tramite openpyxl — dati da SQLite/Strapi API
+2. **CSV → DB** (BOM Import): `Orchestrator._process_csv()` → `parse_csv_bom()` (auto-detect delimiter, KiCad/EasyEDA) → `Database.insert_bom_entry()`
+3. **PDF → parser diretto → DB** (percorso primario, gratis): `extract_text_from_pdf()` (pdfplumber) + `parse_pdf_bom_text()` (regex) → `Orchestrator._import_entries()` → SQLite
+4. **PDF → DeepSeek AI → DB** (fallback a pagamento, disabilitato di default): usato solo se il parser diretto trova 0 entries e `DEEPSEEK_ENABLED=true`. Costo/token loggati ad ogni chiamata
+5. **Inserimento manuale** (via Admin UI o API): accesso diretto ai Collection Type Strapi (se configurato)
+6. **Export database → Excel**: `export_device_to_excel()` → openpyxl con header formattati
+
+**Funzionalità trasversali:**
+- **Duplicati**: `insert_bom_entry()` restituisce None se stessa device_id + reference_designator esiste già → orchestrator logga warning e skippa
+- **Classificazione EEC**: `_import_entries()` assegna automaticamente `eec_category_id` tramite `classify_all()` (16 categorie EEC)
 
 **Note implementative:**
 - **EECClassifier**: query al database locale o Strapi API per mapping designator → categoria EEC

@@ -1,16 +1,22 @@
 # BOM Import Pipeline — Specifica Tecnica
 
-**VERSIONE: 1.6** | **Data:** 12/08/2026 | **Autore:** Tropeano Luca
+**VERSIONE: 1.7** | **Data:** 12/08/2026 | **Autore:** Tropeano Luca
 
 ## Panoramica
 
-Pipeline Python (CLI) per importare file BOM da Excel (.xlsx) e da PDF, scrivendo i dati su SQLite (locale) e/o Strapi API.
+Pipeline Python (CLI) per importare file BOM da Excel (.xlsx), CSV e PDF, classificare i componenti (EEC 16 categorie), controllare duplicati ed esportare in Excel.
 
 **Flussi supportati:**
 - **Excel (.xlsx)** → openpyxl parser → SQLite / Strapi API
+- **CSV** (KiCad/EasyEDA, `.csv`/`.txt`) → csv_parser (auto-detect delimitatore) → SQLite / Strapi API
 - **PDF (.pdf) con testo estraibile** → pdfplumber → **parser diretto (regex)** → SQLite / Strapi API
 - **PDF (.pdf) non riconosciuto dal parser diretto** → **DeepSeek AI (fallback, disabilitato di default)** → SQLite / Strapi API
 - **PDF scannerizzato/immagine** → non ancora supportato (pianificato: OCR/AI in fasi successive)
+
+**Funzionalità trasversali:**
+- Classificazione EEC automatica (16 categorie) dai reference designator
+- Controllo duplicati BOM (skip con warning se già importata)
+- Esportazione database → Excel (`.xlsx`) con header formattati
 
 La AI DeepSeek è un **fallback a pagamento**: usata solo se il parser diretto trova 0 componenti, e solo se esplicitamente abilitata via `DEEPSEEK_ENABLED=true`.
 
@@ -29,8 +35,11 @@ ariadne-py/
 │   ├── excel_parser.py             # Parsing Excel (openpyxl)
 │   ├── pdf_extractor.py            # Estrazione testo PDF (pdfplumber)
 │   ├── pdf_parser.py               # Parser diretto BOM da testo (regex, senza AI)
+│   ├── csv_parser.py               # Parsing CSV (KiCad/EasyEDA, auto-detect)
 │   ├── ai_client.py                # Client DeepSeek (OpenAI-compatibile, fallback)
 │   ├── orchestrator.py             # Orchestrator — coordinamento processi
+│   ├── eec.py                      # Classificazione EEC 16 categorie
+│   ├── export.py                   # Export database → Excel
 │   └── sftp_client.py              # Upload SFTP (paramiko)
 └── tests/
     ├── __init__.py
@@ -38,6 +47,7 @@ ariadne-py/
     ├── test_pdf_parser.py           # pytest — parser PDF diretto
     ├── test_ai_client.py            # pytest — risposte DeepSeek + cost tracking
     ├── test_orchestrator.py         # pytest — flussi Excel/PDF, AI fallback
+    ├── test_new_features.py         # pytest — duplicati, EEC, export
     └── test_models.py               # pytest — modelli pydantic
 ```
 
@@ -244,6 +254,35 @@ class DeepSeekClient:
         return AIExtractionResult(entries=entries, usage=usage)
 ```
 
+## csv_parser.py — Parsing CSV
+
+File: `ariadne/csv_parser.py`
+
+- Auto-detect delimitatore (virgola o punto e virgola)
+- Gestisce formati KiCad (Ref,Qty,Value,Footprint) e EasyEDA (Id,Designator,Package,Quantity)
+- `_split_designators()` — separa designator multipli (virgola, punto e virgola o spazio)
+- `_detect_mounting_type()` — deduce SMT/THT da footprint e valore
+- Gestisce flag DoNotPopulate, Gender, Supplier
+- Supporta file `.csv` e `.txt` con lo stesso formato
+
+## eec.py — Classificazione EEC
+
+File: `ariadne/eec.py`
+
+- 16 categorie EEC (Resistors, Capacitors, Inductors, Diodes, Transistors, ICs, Connectors, Switches, Transformers, Fuses, Crystals/Oscillators, LEDs, Sensors, Actuators, Batteries, Other)
+- `classify_designator(prefix)` → categoria da singolo designator (R→1, C→2, L→3, D→4, Q→5, U→6, J/CN/K→7, SW→8, T→9, F→10, X/Y→11, LED→12, BT→15)
+- `classify_all(designators)` → categoria dominante da stringa multipla (conta e restituisce la più frequente)
+- Assegnazione automatica durante l'import (orchestrator)
+
+## export.py — Esportazione Excel
+
+File: `ariadne/export.py`
+
+- `export_device_to_excel(db, device_id, output_path)` → `.xlsx`
+- Header formattati (sfondo blu, testo bianco)
+- 12 colonne: Item, Qty, Reference, Part Value, Package, Mounting, Manufacturer, Mfr Order Code, Supplier, Supplier Code, EEC Category, Notes
+- Larghezze colonne ottimizzate, auto-filter attivo
+
 ## database.py — Wrapper SQLite
 
 File: `ariadne/database.py`
@@ -252,7 +291,8 @@ File: `ariadne/database.py`
 - Schema: `device` (id, brand, model_name, manufacturer, year_of_production, notes)
 - Schema: `bom_entry` (id, device_id FK, item_number, quantity, reference_designator, part_value, package, manufacturer, manufacturer_order_code, supplier, supplier_order_code, notes, mounting_type, designator_code, eec_category_id)
 - `find_or_create_device(device)` → device_id
-- `insert_bom_entry(device_id, entry)` → entry_id
+- `insert_bom_entry(device_id, entry)` → entry_id (None se duplicato: stessa device_id + reference_designator)
+- `get_bom_entries(device_id)` → list of rows (per export/verifica)
 - `get_stats()` → dict (device, bom_entry, material counts)
 
 ## Modelli Dati (Pydantic)
@@ -336,7 +376,7 @@ pip install -e ".[dev]"
 pytest tests/ --verbose
 ```
 
-**28 test, tutti passanti.**
+**47 test, tutti passanti.**
 
 | File | # Test | Cosa verifica |
 |------|--------|---------------|
@@ -345,18 +385,24 @@ pytest tests/ --verbose
 | test_pdf_parser.py | 10 | Parsing BOM PDF diretto (designator, quantità, package, THT, manufacturer, campione reale) |
 | test_ai_client.py | 6 | DeepSeek JSON parsing + usage/cost tracking |
 | test_orchestrator.py | 5 | Flussi Excel/PDF, AI disabilitata di default, fallback AI |
+| test_new_features.py | 19 | Duplicati (4), EEC classification (9), esportazione Excel (2) |
 
 ## Risultati reali
 
-| Input | Risultato |
-|-------|-----------|
-| Excel reale (74 righe) | **74/74 importate** |
-| PDF reale (30 righe, testo) | **30/30 estratte** dal parser diretto (nessuna chiamata AI) |
+| BOM | Formato | Componenti | Import |
+|-----|---------|------------|--------|
+| STM STEVAL-SPIN3204 | PDF testo | 30 | 30/30 |
+| STM STEVAL-SPIN3204 | Excel | 74 | 74/74 |
+| Commodore Amiga 2000 | CSV KiCad | 140 | 140/140 |
+| e-radionica Inkplate 5 | CSV EasyEDA | 71 | 71/71 |
+| Raspberry Pi CM5 IO Board | CSV KiCad | 35 | 35/35 |
+| **Totale** | | **350** | **350/350** |
 
 ## CLI Usage
 
 ```bash
 ariadne process "BOM.xlsx" --brand STM --model STEVAL-SPIN3204
+ariadne process "BOM.csv" --brand Commodore --model "Amiga 2000"
 ariadne process "BOM.pdf" --brand STM --model STEVAL-SPIN3204   # parser diretto, AI solo se serve
 ariadne stats
 ```
