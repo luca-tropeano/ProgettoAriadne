@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 from ariadne.config import AppConfig, MongoConfig
 from ariadne.mongo_store import RawDataStore
 from ariadne.orchestrator import Orchestrator
@@ -17,6 +19,59 @@ def _store(enabled: bool = True) -> RawDataStore:
     return RawDataStore(
         MongoConfig(uri="mongodb://invalid-host:27017", database=_TEST_DB, collection=_TEST_COL)
     )
+
+
+class FakeCollection:
+    def __init__(self):
+        self.docs = []
+        self.fail_insert = False
+
+    def insert_one(self, doc):
+        if self.fail_insert:
+            raise Exception("insert failed")
+        self.docs.append(doc)
+        return SimpleNamespace(inserted_id=len(self.docs))
+
+    def count_documents(self, filter=None):
+        return len(self.docs)
+
+
+class FakeAdmin:
+    def command(self, cmd):
+        return {"ok": 1}
+
+
+class _FailingAdmin:
+    def command(self, cmd):
+        raise Exception("ping failed")
+
+
+class FakeDB:
+    def __init__(self, collection):
+        self._collection = collection
+
+    def __getitem__(self, name):
+        return self._collection
+
+
+class FakeClient:
+    def __init__(self, collection, fail_ping=False):
+        self._collection = collection
+        self.closed = False
+        self.admin = FakeAdmin() if not fail_ping else _FailingAdmin()
+
+    def __getitem__(self, name):
+        return FakeDB(self._collection)
+
+    def __setitem__(self, name, value):
+        pass
+
+    def close(self):
+        self.closed = True
+
+
+def _monkeypatch_client(monkeypatch, client):
+    monkeypatch.setattr("ariadne.mongo_store.MongoClient", lambda uri, **kw: client)
 
 
 class TestRawDataStore:
@@ -97,3 +152,74 @@ class TestOrchestratorRawIntegration:
                     pass
         finally:
             orch.close()
+
+
+class TestRawDataStoreOnline:
+    def test_connect_success_sets_available(self, monkeypatch):
+        coll = FakeCollection()
+        _monkeypatch_client(monkeypatch, FakeClient(coll))
+        s = _store(enabled=True)
+        try:
+            assert s.available is True
+            assert s._collection is coll
+        finally:
+            s.close()
+
+    def test_store_returns_object_id(self, monkeypatch):
+        coll = FakeCollection()
+        _monkeypatch_client(monkeypatch, FakeClient(coll))
+        s = _store(enabled=True)
+        try:
+            doc_id = s.store("f.csv", "csv", "R1,10k", {"device": "X"})
+            assert doc_id is not None
+            assert len(coll.docs) == 1
+            assert coll.docs[0]["filename"] == "f.csv"
+            assert coll.docs[0]["file_format"] == "csv"
+            assert coll.docs[0]["content_hash"] == RawDataStore._content_hash("R1,10k")
+            assert coll.docs[0]["metadata"]["device"] == "X"
+            assert "created_at" in coll.docs[0]
+        finally:
+            s.close()
+
+    def test_count_after_store(self, monkeypatch):
+        coll = FakeCollection()
+        _monkeypatch_client(monkeypatch, FakeClient(coll))
+        s = _store(enabled=True)
+        try:
+            assert s.count() == 0
+            s.store("a.csv", "csv", "x")
+            s.store("b.csv", "csv", "y")
+            assert s.count() == 2
+        finally:
+            s.close()
+
+    def test_store_insert_failure_returns_none(self, monkeypatch):
+        coll = FakeCollection()
+        coll.fail_insert = True
+        _monkeypatch_client(monkeypatch, FakeClient(coll))
+        s = _store(enabled=True)
+        try:
+            assert s.available is True
+            assert s.store("f.csv", "csv", "x") is None
+        finally:
+            s.close()
+
+    def test_close_closes_client(self, monkeypatch):
+        coll = FakeCollection()
+        client = FakeClient(coll)
+        _monkeypatch_client(monkeypatch, client)
+        s = _store(enabled=True)
+        s.close()
+        assert client.closed is True
+        assert s.available is False
+
+    def test_ping_failure_disables_store(self, monkeypatch):
+        coll = FakeCollection()
+        _monkeypatch_client(monkeypatch, FakeClient(coll, fail_ping=True))
+        s = _store(enabled=True)
+        try:
+            assert s.available is False
+            assert s._client is None
+            assert s.store("f.csv", "csv", "x") is None
+        finally:
+            s.close()

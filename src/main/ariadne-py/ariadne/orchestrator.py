@@ -46,8 +46,9 @@ class Orchestrator:
         elif ext == ".pdf":
             return self._process_pdf(file_path, device)
         else:
-            result = ImportResult(success=False)
+            result = ImportResult()
             result.errors.append(f"Unsupported format: {ext}")
+            result.success = False
             return result
 
     def _read_raw(self, file_path: str, ext: str) -> str | None:
