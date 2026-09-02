@@ -15,6 +15,9 @@ pip install -e ".[dev]"
 # Importa BOM Excel
 ariadne process "BOM.xlsx" --brand STM --model STEVAL-SPIN3204
 
+# Importa BOM OpenDocument (.ods)
+ariadne process "BOM.ods" --brand Devtank --model "HILTOP Motherboard"
+
 # Importa BOM CSV (KiCad, EasyEDA)
 ariadne process "BOM.csv" --brand Commodore --model "Amiga 2000"
 
@@ -30,6 +33,7 @@ ariadne stats
 | Formato | Estensione | Parser | Note |
 |---------|-----------|--------|------|
 | Excel | `.xlsx` | openpyxl | Header riga 6, 17 colonne |
+| OpenDocument | `.ods` | ods_parser | Schema dinamico, header per nome colonna |
 | CSV KiCad | `.csv` | csv_parser | Separatore `;` o `,`, auto-detect |
 | CSV EasyEDA | `.csv` | csv_parser | Separatore `;`, campi quotati |
 | PDF testuale | `.pdf` | pdfplumber + pdf_parser | Parser regex diretto, gratis |
@@ -37,7 +41,7 @@ ariadne stats
 
 ## Funzionalità
 
-- **Import BOM** da Excel (`.xlsx`), CSV (KiCad/EasyEDA) e PDF testuali
+- **Import BOM** da Excel (`.xlsx`), OpenDocument (`.ods`), CSV (KiCad/EasyEDA) e PDF testuali
 - **Classificazione EEC automatica** — 16 categorie assegnate dai reference designator
 - **Controllo duplicati** — skip con warning se la BOM è già stata importata
 - **Esportazione Excel** — export del database in `.xlsx` con header formattati
@@ -77,6 +81,7 @@ ariadne-py/
 │   ├── models.py            # Modelli Pydantic (BOMEntry, Device, Material)
 │   ├── database.py          # Wrapper SQLite
 │   ├── excel_parser.py      # Parsing Excel (openpyxl)
+│   ├── ods_parser.py        # Parsing OpenDocument (.ods)
 │   ├── csv_parser.py        # Parsing CSV (KiCad/EasyEDA)
 │   ├── pdf_extractor.py     # Estrazione testo PDF (pdfplumber)
 │   ├── pdf_parser.py        # Parser diretto BOM (regex, senza AI)
@@ -89,6 +94,7 @@ ariadne-py/
 └── tests/
     ├── test_models.py
     ├── test_excel_parser.py
+    ├── test_ods_parser.py
     ├── test_pdf_parser.py
     ├── test_ai_client.py
     ├── test_orchestrator.py
@@ -103,9 +109,10 @@ cd src/main/ariadne-py
 pytest -v
 ```
 
-**54 test** che coprono:
+**115 test** che coprono:
 - Modelli Pydantic (BOMEntry, Device, ImportResult)
 - Parser Excel (rilevamento SMT/THT)
+- Parser OpenDocument (.ods)
 - Parser PDF diretto (designator, quantità, package, manufacturer)
 - Client DeepSeek (parsing JSON, usage/cost tracking)
 - Orchestrator (flussi Excel/CSV/PDF, fallback AI, duplicati)
@@ -122,8 +129,9 @@ pytest -v
 | Commodore Amiga 2000 | CSV KiCad | 140 | 140/140 |
 | e-radionica Inkplate 5 | CSV EasyEDA | 71 | 71/71 |
 | Raspberry Pi CM5 IO Board | CSV KiCad | 35 | 35/35 |
+| Devtank HILTOP Motherboard | ODS | 160 | 160/160 |
 
-**Totale: 350 componenti importati, 0 errori.**
+**Totale: 510 componenti importati, 0 errori.**
 
 ## Licenza
 

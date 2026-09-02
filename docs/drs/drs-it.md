@@ -6,7 +6,7 @@ DIBRIS – Università di Genova. Scuola Politecnica, Corso di Ingegneria del So
 
 <div align='right'> <b> Autori </b> <br> Tropeano Luca </div>
 
-**VERSIONE : 1.8**
+**VERSIONE : 1.9**
 
 ### STORIO REVISIONI
 
@@ -21,6 +21,7 @@ DIBRIS – Università di Genova. Scuola Politecnica, Corso di Ingegneria del So
 | 1.6      | 12/08/2026 | Tropeano  | Aggiunto parser PDF diretto BOM (regex, senza AI) come percorso primario per PDF testuali. DeepSeek AI declassata a fallback a pagamento, disabilitato di default (DEEPSEEK_ENABLED), max_tokens 2000, log token/costo per chiamata. Rimossi riferimenti Claude/Anthropic. 28 test pytest passanti. |
 | 1.7      | 12/08/2026 | Tropeano  | Parser CSV (KiCad/EasyEDA, auto-detect delimitatore), classificazione EEC automatica (16 categorie), controllo duplicati BOM (skip con warning), esportazione DB → Excel. 47 test pytest, 350/350 componenti importati da 5 BOM reali. |
 | 1.8      | 12/08/2026 | Tropeano  | Storage dati grezzi MongoDB (bom_files: contenuto + hash sha256 + metadata). Opzionale, graceful degradation offline. 54 test pytest. |
+| 1.9      | 12/08/2026 | Tropeano  | Parser OpenDocument (.ods) con schema dinamico. Import BOM reale Devtank HILTOP Motherboard (160/160). 115 test pytest, 93% coverage, 510/510 componenti da 6 BOM reali. |
 
 ## Indice
 

@@ -2,7 +2,7 @@
 
 ##### DIBRIS – University of Genoa. Polytechnic School, Software Engineering Course 80154
 
-**VERSION : 1.6**
+**VERSION : 1.7**
 
 **Authors**
 Tropeano Luca
@@ -18,6 +18,7 @@ Tropeano Luca
 | 1.4     | 22/07/2026 | Tropeano | PDF AI extraction implemented (FR10, NFR6 updated), device linking/auto-creation (FR8), Excel column mapping corrected, API token optional, export tool added, CLI flags --brand/--model/--manufacturer/--year |
 | 1.5     | 12/08/2026 | Tropeano | CSV import support (FR9), EEC auto-classification (FR7), duplicate BOM check, DB→Excel export (FR14), DeepSeek AI as paid fallback. 47 tests, 350/350 components from 5 real BOMs. |
 | 1.6     | 12/08/2026 | Tropeano | MongoDB raw-data storage (NFR8 data retention): raw documents archived before processing. Optional, offline degradation. 54 tests. |
+| 1.7     | 12/08/2026 | Tropeano | OpenDocument (.ods) import support (FR9): dynamic schema, real HILTOP Motherboard BOM (160/160). 115 tests, 93% coverage. |
 
 # Index
 

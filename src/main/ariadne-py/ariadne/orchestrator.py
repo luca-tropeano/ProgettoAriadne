@@ -10,6 +10,7 @@ from ariadne.csv_parser import parse_csv_bom
 from ariadne.eec import classify_all
 from ariadne.mongo_store import RawDataStore
 from ariadne.models import Device, ImportResult
+from ariadne.ods_parser import parse_ods_bom
 from ariadne.pdf_extractor import extract_text_from_pdf
 from ariadne.pdf_parser import parse_pdf_bom_text
 
@@ -41,6 +42,8 @@ class Orchestrator:
 
         if ext in (".xlsx", ".xls"):
             return self._process_excel(file_path, device)
+        elif ext == ".ods":
+            return self._process_ods(file_path, device)
         elif ext == ".csv":
             return self._process_csv(file_path, device)
         elif ext == ".pdf":
@@ -63,6 +66,8 @@ class Orchestrator:
                     for row in ws.iter_rows(values_only=True):
                         lines.append("\t".join("" if c is None else str(c) for c in row))
                 return "\n".join(lines)
+            elif ext == ".ods":
+                return self._ods_to_text(file_path)
             elif ext == ".csv":
                 return Path(file_path).read_text(encoding="utf-8", errors="replace")
             elif ext == ".pdf":
@@ -74,6 +79,23 @@ class Orchestrator:
             logger.warning("Could not read raw content for %s: %s", file_path, e)
             return None
 
+    @staticmethod
+    def _ods_to_text(file_path: str) -> str:
+        from odf.opendocument import load
+        from odf.table import Table, TableCell, TableRow
+        from odf.text import P
+        doc = load(file_path)
+        lines = []
+        for table in doc.spreadsheet.getElementsByType(Table):
+            lines.append(f"[Sheet: {table.getAttribute('name')}]")
+            for row in table.getElementsByType(TableRow):
+                cells = []
+                for cell in row.getElementsByType(TableCell):
+                    parts = [str(p) for p in cell.getElementsByType(P)]
+                    cells.append(" ".join(parts))
+                lines.append("\t".join(cells))
+        return "\n".join(lines)
+
 
     def _process_excel(self, file_path: str, device: Device) -> ImportResult:
         entries = parse_excel_bom(file_path)
@@ -81,6 +103,10 @@ class Orchestrator:
 
     def _process_csv(self, file_path: str, device: Device) -> ImportResult:
         entries = parse_csv_bom(file_path)
+        return self._import_entries(entries, device)
+
+    def _process_ods(self, file_path: str, device: Device) -> ImportResult:
+        entries = parse_ods_bom(file_path)
         return self._import_entries(entries, device)
 
     def _process_pdf(self, file_path: str, device: Device) -> ImportResult:

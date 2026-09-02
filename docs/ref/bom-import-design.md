@@ -1,13 +1,14 @@
 # BOM Import Pipeline — Specifica Tecnica
 
-**VERSIONE: 1.8** | **Data:** 12/08/2026 | **Autore:** Tropeano Luca
+**VERSIONE: 1.9** | **Data:** 12/08/2026 | **Autore:** Tropeano Luca
 
 ## Panoramica
 
-Pipeline Python (CLI) per importare file BOM da Excel (.xlsx), CSV e PDF, classificare i componenti (EEC 16 categorie), controllare duplicati, esportare in Excel e archiviare i dati grezzi in MongoDB.
+Pipeline Python (CLI) per importare file BOM da Excel (.xlsx), OpenDocument (.ods), CSV e PDF, classificare i componenti (EEC 16 categorie), controllare duplicati, esportare in Excel e archiviare i dati grezzi in MongoDB.
 
 **Flussi supportati:**
 - **Excel (.xlsx)** → openpyxl parser → SQLite / Strapi API
+- **OpenDocument (.ods)** → ods_parser (schema dinamico, header per nome colonna) → SQLite / Strapi API
 - **CSV** (KiCad/EasyEDA, `.csv`/`.txt`) → csv_parser (auto-detect delimitatore) → SQLite / Strapi API
 - **PDF (.pdf) con testo estraibile** → pdfplumber → **parser diretto (regex)** → SQLite / Strapi API
 - **PDF (.pdf) non riconosciuto dal parser diretto** → **DeepSeek AI (fallback, disabilitato di default)** → SQLite / Strapi API
@@ -34,6 +35,8 @@ ariadne-py/
 │   ├── models.py                   # BOMEntry, Device, Material, ComponentMaterial, ImportResult (pydantic)
 │   ├── database.py                 # Wrapper SQLite
 │   ├── excel_parser.py             # Parsing Excel (openpyxl)
+│   ├── ods_parser.py               # Parsing OpenDocument (.ods, schema dinamico)
+│   ├── csv_parser.py               # Parsing CSV (KiCad/EasyEDA, auto-detect)
 │   ├── pdf_extractor.py            # Estrazione testo PDF (pdfplumber)
 │   ├── pdf_parser.py               # Parser diretto BOM da testo (regex, senza AI)
 │   ├── csv_parser.py               # Parsing CSV (KiCad/EasyEDA, auto-detect)
@@ -268,6 +271,17 @@ File: `ariadne/csv_parser.py`
 - Gestisce flag DoNotPopulate, Gender, Supplier
 - Supporta file `.csv` e `.txt` con lo stesso formato
 
+## ods_parser.py — Parsing OpenDocument (.ods)
+
+File: `ariadne/ods_parser.py`
+
+- Legge `.ods` (OpenDocument Spreadsheet) tramite odfpy
+- **Schema dinamico**: individua la riga di intestazione per nome colonna (Ref/Qty/Value/Footprint/Description/Manufacturer/Supplier...)
+- Gestisce righe di titolo/meta sopra l'header (es. BOM KiCad con header "Title", "Revision", "Date")
+- Alias di nomi colonna estesi (Reference, Designator, RefDes, Quantity, Designation, Mfr, MPN, Vendor, MouserPN...)
+- Rilevamento SMT/THT da footprint
+- `parse_ods_bom(file_path)` → list[BOMEntry]
+
 ## eec.py — Classificazione EEC
 
 File: `ariadne/eec.py`
@@ -383,6 +397,7 @@ dependencies = [
     "click>=8.1",
     "python-dotenv>=1.0",
     "pymongo>=4.6",
+    "odfpy>=1.4",
 ]
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "pytest-cov>=5.0"]
@@ -396,17 +411,22 @@ pip install -e ".[dev]"
 pytest tests/ --verbose
 ```
 
-**54 test, tutti passanti.**
+**115 test, tutti passanti.**
 
 | File | # Test | Cosa verifica |
 |------|--------|---------------|
 | test_models.py | 6 | BOMEntry, Device, ImportResult |
-| test_excel_parser.py | 3 | SMT/THT detection |
+| test_excel_parser.py | 6 | SMT/THT detection + parse reale |
+| test_ods_parser.py | 6 | Parse ODS, THT, meta rows, BOM reale HILTOP |
 | test_pdf_parser.py | 10 | Parsing BOM PDF diretto (designator, quantità, package, THT, manufacturer, campione reale) |
-| test_ai_client.py | 6 | DeepSeek JSON parsing + usage/cost tracking |
-| test_orchestrator.py | 5 | Flussi Excel/PDF, AI disabilitata di default, fallback AI |
-| test_new_features.py | 19 | Duplicati (4), EEC classification (9), esportazione Excel (2) |
-| test_mongo_store.py | 7 | Raw store offline (5) + integrazione orchestrator (2) |
+| test_pdf_extractor.py | 4 | pdfplumber testo PDF + stream |
+| test_ai_client.py | 11 | DeepSeek parsing/cost + mock HTTP |
+| test_csv_parser.py | 20 | CSV KiCad/EasyEDA, delimitatori, DNP, reali AMIGA/Inkplate |
+| test_orchestrator.py | 9 | Flussi Excel/CSV/PDF/ODS, AI fallback, duplicati |
+| test_new_features.py | 19 | Duplicati, EEC, export Excel |
+| test_mongo_store.py | 13 | Raw store offline/online (mock) |
+| test_sftp_client.py | 9 | SFTP mock |
+| test_cli.py | 5 | CLI end-to-end |
 
 ## Risultati reali
 
@@ -417,12 +437,14 @@ pytest tests/ --verbose
 | Commodore Amiga 2000 | CSV KiCad | 140 | 140/140 |
 | e-radionica Inkplate 5 | CSV EasyEDA | 71 | 71/71 |
 | Raspberry Pi CM5 IO Board | CSV KiCad | 35 | 35/35 |
-| **Totale** | | **350** | **350/350** |
+| Devtank HILTOP Motherboard | ODS | 160 | 160/160 |
+| **Totale** | | **510** | **510/510** |
 
 ## CLI Usage
 
 ```bash
 ariadne process "BOM.xlsx" --brand STM --model STEVAL-SPIN3204
+ariadne process "BOM.ods" --brand Devtank --model "HILTOP Motherboard"
 ariadne process "BOM.csv" --brand Commodore --model "Amiga 2000"
 ariadne process "BOM.pdf" --brand STM --model STEVAL-SPIN3204   # parser diretto, AI solo se serve
 ariadne stats

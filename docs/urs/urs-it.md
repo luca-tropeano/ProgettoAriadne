@@ -2,7 +2,7 @@
 
 ##### DIBRIS – Università di Genova. Scuola Politecnica, Corso di Ingegneria del Software 80154
 
-**VERSIONE : 1.6**
+**VERSIONE : 1.7**
 
 **Autori**
 Tropeano Luca
@@ -18,6 +18,7 @@ Tropeano Luca
 | 1.4      | 22/07/2026 | Tropeano | Estrazione PDF AI implementata (FR10, NFR6 aggiornati), collegamento/creazione automatica dispositivi (FR8), mapping colonne Excel corretto, API token opzionale, tool export aggiunto, flag CLI --brand/--model/--manufacturer/--year |
 | 1.5      | 12/08/2026 | Tropeano | Supporto import CSV (FR9), classificazione EEC automatica (FR7), controllo duplicati BOM, export DB→Excel (FR14), DeepSeek AI come fallback a pagamento. 47 test, 350/350 componenti da 5 BOM reali. |
 | 1.6      | 12/08/2026 | Tropeano | Storage dati grezzi MongoDB (NFR8 data retention): documenti raw archiviati prima dell'elaborazione. Opzionale, degradazione offline. 54 test. |
+| 1.7      | 12/08/2026 | Tropeano | Supporto import OpenDocument (.ods) (FR9): schema dinamico, BOM reale HILTOP Motherboard (160/160). 115 test, 93% coverage. |
 
 # Indice
 

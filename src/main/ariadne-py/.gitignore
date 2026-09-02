@@ -4,3 +4,6 @@ __pycache__/
 ariadne.db
 *.pdf
 .env
+.coverage
+htmlcov/
+.pytest_cache/
