@@ -6,7 +6,7 @@ DIBRIS – Università di Genova. Scuola Politecnica, Corso di Ingegneria del So
 
 <div align='right'> <b> Autori </b> <br> Tropeano Luca </div>
 
-**VERSIONE : 1.7**
+**VERSIONE : 1.8**
 
 ### STORIO REVISIONI
 
@@ -20,6 +20,7 @@ DIBRIS – Università di Genova. Scuola Politecnica, Corso di Ingegneria del So
 | 1.5      | 29/07/2026 | Tropeano  | Riscrittura da C#/.NET a Python 3.11+. Pipeline BOM: pacchetto ariadne-py con openpyxl (Excel), pdfplumber (PDF), DeepSeek AI, database SQLite locale, upload SFTP. Test suite pytest. Architettura aggiornata ovunque. |
 | 1.6      | 12/08/2026 | Tropeano  | Aggiunto parser PDF diretto BOM (regex, senza AI) come percorso primario per PDF testuali. DeepSeek AI declassata a fallback a pagamento, disabilitato di default (DEEPSEEK_ENABLED), max_tokens 2000, log token/costo per chiamata. Rimossi riferimenti Claude/Anthropic. 28 test pytest passanti. |
 | 1.7      | 12/08/2026 | Tropeano  | Parser CSV (KiCad/EasyEDA, auto-detect delimitatore), classificazione EEC automatica (16 categorie), controllo duplicati BOM (skip con warning), esportazione DB → Excel. 47 test pytest, 350/350 componenti importati da 5 BOM reali. |
+| 1.8      | 12/08/2026 | Tropeano  | Storage dati grezzi MongoDB (bom_files: contenuto + hash sha256 + metadata). Opzionale, graceful degradation offline. 54 test pytest. |
 
 ## Indice
 

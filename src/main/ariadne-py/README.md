@@ -41,9 +41,10 @@ ariadne stats
 - **Classificazione EEC automatica** — 16 categorie assegnate dai reference designator
 - **Controllo duplicati** — skip con warning se la BOM è già stata importata
 - **Esportazione Excel** — export del database in `.xlsx` con header formattati
+- **Archivio dati grezzi in MongoDB** — ogni file processato viene salvato (contenuto + hash + metadata) prima dell'elaborazione
 - **DeepSeek AI fallback** — per PDF non parsabili dal parser diretto (opzionale, a pagamento)
 - **Database SQLite locale** — nessun server richiesto per l'uso base
-- **47 test pytest** — copertura completa dei parser e della pipeline
+- **54 test pytest** — copertura completa dei parser e della pipeline
 
 ## Configurazione
 
@@ -62,6 +63,9 @@ Variabili d'ambiente principali:
 | `DEEPSEEK_MODEL` | `deepseek-chat` | Modello DeepSeek |
 | `DEEPSEEK_MAX_TOKENS` | `2000` | Token massimi per chiamata |
 | `DATABASE_URL` | `sqlite:///ariadne.db` | URL database |
+| `MONGO_URI` | `mongodb://localhost:27017` | MongoDB (dati grezzi, opzionale) |
+| `MONGO_DATABASE` | `ariadne_raw` | Database MongoDB |
+| `MONGO_COLLECTION` | `bom_files` | Collection raw documents |
 
 ## Struttura del progetto
 
@@ -80,6 +84,7 @@ ariadne-py/
 │   ├── orchestrator.py      # Coordinatore pipeline
 │   ├── eec.py               # Classificazione EEC 16 categorie
 │   ├── export.py            # Export database → Excel
+│   ├── mongo_store.py       # Archivio dati grezzi MongoDB (opzionale)
 │   └── sftp_client.py       # Upload SFTP (paramiko)
 └── tests/
     ├── test_models.py
@@ -87,7 +92,8 @@ ariadne-py/
     ├── test_pdf_parser.py
     ├── test_ai_client.py
     ├── test_orchestrator.py
-    └── test_new_features.py
+    ├── test_new_features.py
+    └── test_mongo_store.py
 ```
 
 ## Test
@@ -97,7 +103,7 @@ cd src/main/ariadne-py
 pytest -v
 ```
 
-**47 test** che coprono:
+**54 test** che coprono:
 - Modelli Pydantic (BOMEntry, Device, ImportResult)
 - Parser Excel (rilevamento SMT/THT)
 - Parser PDF diretto (designator, quantità, package, manufacturer)
@@ -105,6 +111,7 @@ pytest -v
 - Orchestrator (flussi Excel/CSV/PDF, fallback AI, duplicati)
 - Classificazione EEC (16 categorie)
 - Esportazione Excel
+- Archivio MongoDB raw (online/offline, graceful degradation)
 
 ## Risultati reali
 

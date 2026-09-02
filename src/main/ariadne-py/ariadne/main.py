@@ -68,9 +68,11 @@ def stats(ctx):
     finally:
         orch.close()
 
-    click.echo(f"Devices:     {s['devices']}")
-    click.echo(f"BOM Entries: {s['bom_entries']}")
-    click.echo(f"Materials:   {s['materials']}")
+    click.echo(f"Devices:       {s['devices']}")
+    click.echo(f"BOM Entries:   {s['bom_entries']}")
+    click.echo(f"Materials:     {s['materials']}")
+    raw_available = s.get("raw_available", False)
+    click.echo(f"Raw docs (MongoDB): {s.get('raw_documents', 0)} ({'online' if raw_available else 'offline'})")
 
 
 if __name__ == "__main__":

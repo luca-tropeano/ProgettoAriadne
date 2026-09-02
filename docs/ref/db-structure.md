@@ -1,10 +1,12 @@
 # Struttura del Database — Sistema Ariadne di Recupero Materiali (Fase 1)
 
-**VERSIONE : 1.6** | **Data:** 12/08/2026 | **Autore:** Tropeano Luca
+**VERSIONE : 1.7** | **Data:** 12/08/2026 | **Autore:** Tropeano Luca
 
 ## Piattaforma
 
 Database gestito tramite **Strapi** (headless CMS) oppure **SQLite locale** (Python pipeline). L'accesso avviene tramite **API REST** di Strapi (quando configurato) o direttamente via SQLite (modalità locale).
+
+**MongoDB** è usato come archivio dei **dati grezzi** (raw documents): ogni file BOM processato viene salvato in una collection `bom_files` (contenuto, sha256 hash, metadata del dispositivo) prima dell'elaborazione. Lo storage è **opzionale** — se Mongo è offline, la pipeline continua senza errori.
 
 I file Excel (.xlsx) sono usati solo come **formato di input** per l'importazione BOM e opzionalmente per la verifica intermedia dei dati MDF.
 
@@ -261,6 +263,7 @@ POST /api/component-material
 **Funzionalità trasversali:**
 - **Duplicati**: `insert_bom_entry()` restituisce None se stessa device_id + reference_designator esiste già → orchestrator logga warning e skippa
 - **Classificazione EEC**: `_import_entries()` assegna automaticamente `eec_category_id` tramite `classify_all()` (16 categorie EEC)
+- **Dati grezzi in MongoDB**: `Orchestrator.process_file()` salva il documento sorgente (contenuto + sha256 hash + metadata) in `bom_files` prima dell'elaborazione. Storage opzionale: se Mongo è offline (`available=False`), la pipeline continua senza errori
 
 **Note implementative:**
 - **EECClassifier**: query al database locale o Strapi API per mapping designator → categoria EEC

@@ -38,11 +38,21 @@ class DatabaseConfig:
 
 
 @dataclass
+class MongoConfig:
+    """MongoDB — archivio dei dati grezzi (raw documents) prima dell'elaborazione."""
+    uri: str = "mongodb://localhost:27017"
+    database: str = "ariadne_raw"
+    collection: str = "bom_files"
+    from_env: bool = True
+
+
+@dataclass
 class AppConfig:
     strapi: StrapiConfig = field(default_factory=StrapiConfig)
     deepseek: DeepSeekConfig = field(default_factory=DeepSeekConfig)
     sftp: SFTPConfig = field(default_factory=SFTPConfig)
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
+    mongo: MongoConfig = field(default_factory=MongoConfig)
 
     @classmethod
     def from_env(cls) -> AppConfig:
@@ -67,6 +77,11 @@ class AppConfig:
             ),
             database=DatabaseConfig(
                 url=os.getenv("DATABASE_URL", "sqlite:///ariadne.db"),
+            ),
+            mongo=MongoConfig(
+                uri=os.getenv("MONGO_URI", "mongodb://localhost:27017"),
+                database=os.getenv("MONGO_DATABASE", "ariadne_raw"),
+                collection=os.getenv("MONGO_COLLECTION", "bom_files"),
             ),
         )
 

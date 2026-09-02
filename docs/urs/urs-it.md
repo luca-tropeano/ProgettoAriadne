@@ -2,7 +2,7 @@
 
 ##### DIBRIS – Università di Genova. Scuola Politecnica, Corso di Ingegneria del Software 80154
 
-**VERSIONE : 1.5**
+**VERSIONE : 1.6**
 
 **Autori**
 Tropeano Luca
@@ -17,6 +17,7 @@ Tropeano Luca
 | 1.3      | 02/07/2026 | Tropeano | Integrazione Strapi: passaggio da SQL Server diretto a Strapi headless CMS + PostgreSQL, accesso DB tramite API REST |
 | 1.4      | 22/07/2026 | Tropeano | Estrazione PDF AI implementata (FR10, NFR6 aggiornati), collegamento/creazione automatica dispositivi (FR8), mapping colonne Excel corretto, API token opzionale, tool export aggiunto, flag CLI --brand/--model/--manufacturer/--year |
 | 1.5      | 12/08/2026 | Tropeano | Supporto import CSV (FR9), classificazione EEC automatica (FR7), controllo duplicati BOM, export DB→Excel (FR14), DeepSeek AI come fallback a pagamento. 47 test, 350/350 componenti da 5 BOM reali. |
+| 1.6      | 12/08/2026 | Tropeano | Storage dati grezzi MongoDB (NFR8 data retention): documenti raw archiviati prima dell'elaborazione. Opzionale, degradazione offline. 54 test. |
 
 # Indice
 

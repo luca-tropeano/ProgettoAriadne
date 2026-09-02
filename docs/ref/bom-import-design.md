@@ -1,10 +1,10 @@
 # BOM Import Pipeline — Specifica Tecnica
 
-**VERSIONE: 1.7** | **Data:** 12/08/2026 | **Autore:** Tropeano Luca
+**VERSIONE: 1.8** | **Data:** 12/08/2026 | **Autore:** Tropeano Luca
 
 ## Panoramica
 
-Pipeline Python (CLI) per importare file BOM da Excel (.xlsx), CSV e PDF, classificare i componenti (EEC 16 categorie), controllare duplicati ed esportare in Excel.
+Pipeline Python (CLI) per importare file BOM da Excel (.xlsx), CSV e PDF, classificare i componenti (EEC 16 categorie), controllare duplicati, esportare in Excel e archiviare i dati grezzi in MongoDB.
 
 **Flussi supportati:**
 - **Excel (.xlsx)** → openpyxl parser → SQLite / Strapi API
@@ -17,6 +17,7 @@ Pipeline Python (CLI) per importare file BOM da Excel (.xlsx), CSV e PDF, classi
 - Classificazione EEC automatica (16 categorie) dai reference designator
 - Controllo duplicati BOM (skip con warning se già importata)
 - Esportazione database → Excel (`.xlsx`) con header formattati
+- **Archivio dati grezzi in MongoDB**: ogni file processato viene salvato (content + hash + metadata) prima dell'elaborazione; opzionale, graceful degradation offline
 
 La AI DeepSeek è un **fallback a pagamento**: usata solo se il parser diretto trova 0 componenti, e solo se esplicitamente abilitata via `DEEPSEEK_ENABLED=true`.
 
@@ -40,6 +41,7 @@ ariadne-py/
 │   ├── orchestrator.py             # Orchestrator — coordinamento processi
 │   ├── eec.py                      # Classificazione EEC 16 categorie
 │   ├── export.py                   # Export database → Excel
+│   ├── mongo_store.py              # Archivio dati grezzi MongoDB (opzionale)
 │   └── sftp_client.py              # Upload SFTP (paramiko)
 └── tests/
     ├── __init__.py
@@ -48,6 +50,7 @@ ariadne-py/
     ├── test_ai_client.py            # pytest — risposte DeepSeek + cost tracking
     ├── test_orchestrator.py         # pytest — flussi Excel/PDF, AI fallback
     ├── test_new_features.py         # pytest — duplicati, EEC, export
+    ├── test_mongo_store.py          # pytest — archivio raw MongoDB (online/offline)
     └── test_models.py               # pytest — modelli pydantic
 ```
 
@@ -283,6 +286,18 @@ File: `ariadne/export.py`
 - 12 colonne: Item, Qty, Reference, Part Value, Package, Mounting, Manufacturer, Mfr Order Code, Supplier, Supplier Code, EEC Category, Notes
 - Larghezze colonne ottimizzate, auto-filter attivo
 
+## mongo_store.py — Archivio Dati Grezzi MongoDB
+
+File: `ariadne/mongo_store.py`
+
+- Archivia i documenti BOM **grezzi** prima dell'elaborazione (Excel→testo, CSV→testo, PDF→testo estratto)
+- Collection `bom_files`: `filename`, `file_format`, `content`, `content_hash` (sha256), `metadata`, `created_at`
+- `store(filename, file_format, content, metadata)` → ObjectId string o None
+- **Optional**: se MongoDB non è raggiungibile, `available=False` e la pipeline continua senza errori (graceful degradation)
+- `serverSelectionTimeoutMS=1500` via `_connect()` → fallback rapido
+- `_content_hash()` — hash del contenuto per deduplicazione/verifica integrità
+- Integrazione: `Orchestrator.process_file()` salva il raw prima del parse; `get_stats()` include `raw_documents` e `raw_available`
+
 ## database.py — Wrapper SQLite
 
 File: `ariadne/database.py`
@@ -350,6 +365,10 @@ DEEPSEEK_MODEL=deepseek-chat
 # SFTP_PASSWORD=
 # SFTP_REMOTE_PATH=/uploads
 # DATABASE_URL=sqlite:///ariadne.db
+# --- MongoDB (dati grezzi, opzionale) ---
+# MONGO_URI=mongodb://localhost:27017
+# MONGO_DATABASE=ariadne_raw
+# MONGO_COLLECTION=bom_files
 ```
 
 ## Dipendenze (pyproject.toml)
@@ -363,6 +382,7 @@ dependencies = [
     "pydantic>=2.7",
     "click>=8.1",
     "python-dotenv>=1.0",
+    "pymongo>=4.6",
 ]
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "pytest-cov>=5.0"]
@@ -376,7 +396,7 @@ pip install -e ".[dev]"
 pytest tests/ --verbose
 ```
 
-**47 test, tutti passanti.**
+**54 test, tutti passanti.**
 
 | File | # Test | Cosa verifica |
 |------|--------|---------------|
@@ -386,6 +406,7 @@ pytest tests/ --verbose
 | test_ai_client.py | 6 | DeepSeek JSON parsing + usage/cost tracking |
 | test_orchestrator.py | 5 | Flussi Excel/PDF, AI disabilitata di default, fallback AI |
 | test_new_features.py | 19 | Duplicati (4), EEC classification (9), esportazione Excel (2) |
+| test_mongo_store.py | 7 | Raw store offline (5) + integrazione orchestrator (2) |
 
 ## Risultati reali
 

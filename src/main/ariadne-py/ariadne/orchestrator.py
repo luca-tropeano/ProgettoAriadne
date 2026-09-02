@@ -8,6 +8,7 @@ from ariadne.database import Database
 from ariadne.excel_parser import parse_excel_bom
 from ariadne.csv_parser import parse_csv_bom
 from ariadne.eec import classify_all
+from ariadne.mongo_store import RawDataStore
 from ariadne.models import Device, ImportResult
 from ariadne.pdf_extractor import extract_text_from_pdf
 from ariadne.pdf_parser import parse_pdf_bom_text
@@ -18,10 +19,25 @@ class Orchestrator:
         self._config = config
         self._db = Database(config.database)
         self._ai = DeepSeekClient(config.deepseek)
+        self._raw = RawDataStore(config.mongo)
 
     def process_file(self, file_path: str, device: Device) -> ImportResult:
         path = Path(file_path)
         ext = path.suffix.lower()
+        metadata = {
+            "device_brand": device.brand,
+            "device_model": device.model_name,
+            "manufacturer": device.manufacturer,
+        }
+
+        raw_content = self._read_raw(file_path, ext)
+        if raw_content is not None:
+            raw_id = self._raw.store(
+                filename=path.name,
+                file_format=ext.lstrip("."),
+                content=raw_content,
+                metadata=metadata,
+            )
 
         if ext in (".xlsx", ".xls"):
             return self._process_excel(file_path, device)
@@ -33,6 +49,30 @@ class Orchestrator:
             result = ImportResult(success=False)
             result.errors.append(f"Unsupported format: {ext}")
             return result
+
+    def _read_raw(self, file_path: str, ext: str) -> str | None:
+        """Estrae il contenuto grezzo leggibile per l'archivio MongoDB."""
+        try:
+            if ext in (".xlsx", ".xls"):
+                from openpyxl import load_workbook
+                wb = load_workbook(file_path, data_only=True)
+                lines = []
+                for ws in wb.worksheets:
+                    lines.append(f"[Sheet: {ws.title}]")
+                    for row in ws.iter_rows(values_only=True):
+                        lines.append("\t".join("" if c is None else str(c) for c in row))
+                return "\n".join(lines)
+            elif ext == ".csv":
+                return Path(file_path).read_text(encoding="utf-8", errors="replace")
+            elif ext == ".pdf":
+                return extract_text_from_pdf(file_path)
+            else:
+                return None
+        except Exception as e:
+            from ariadne.mongo_store import logger
+            logger.warning("Could not read raw content for %s: %s", file_path, e)
+            return None
+
 
     def _process_excel(self, file_path: str, device: Device) -> ImportResult:
         entries = parse_excel_bom(file_path)
@@ -109,8 +149,12 @@ class Orchestrator:
         return result
 
     def get_stats(self) -> dict:
-        return self._db.get_stats()
+        stats = self._db.get_stats()
+        stats["raw_documents"] = self._raw.count()
+        stats["raw_available"] = self._raw.available
+        return stats
 
     def close(self):
         self._ai.close()
+        self._raw.close()
         self._db.close()
