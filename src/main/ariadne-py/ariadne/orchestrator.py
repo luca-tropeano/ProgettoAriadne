@@ -8,6 +8,7 @@ from ariadne.database import Database
 from ariadne.excel_parser import parse_excel_bom
 from ariadne.csv_parser import parse_csv_bom
 from ariadne.eec import classify_all
+from ariadne.ibom_parser import parse_ibom_bom
 from ariadne.mongo_store import RawDataStore
 from ariadne.models import Device, ImportResult
 from ariadne.ods_parser import parse_ods_bom
@@ -49,6 +50,8 @@ class Orchestrator:
             return self._process_csv(file_path, device)
         elif ext == ".pdf":
             return self._process_pdf(file_path, device)
+        elif ext in (".html", ".htm"):
+            return self._process_ibom(file_path, device)
         else:
             result = ImportResult()
             result.errors.append(f"Unsupported format: {ext}")
@@ -73,6 +76,10 @@ class Orchestrator:
                 return Path(file_path).read_text(encoding="utf-8", errors="replace")
             elif ext == ".pdf":
                 return extract_text_from_pdf(file_path)
+            elif ext in (".html", ".htm"):
+                return Path(file_path).read_text(encoding="utf-8", errors="replace")
+            elif ext in (".xml", ".json"):
+                return Path(file_path).read_text(encoding="utf-8", errors="replace")
             else:
                 return None
         except Exception as e:
@@ -108,6 +115,21 @@ class Orchestrator:
 
     def _process_ods(self, file_path: str, device: Device) -> ImportResult:
         entries = parse_ods_bom(file_path)
+        return self._import_entries(entries, device)
+
+    def _process_ibom(self, file_path: str, device: Device) -> ImportResult:
+        try:
+            entries = parse_ibom_bom(file_path)
+        except Exception as e:
+            result = ImportResult()
+            result.errors.append(f"IBOM parse failed: {e}")
+            result.success = False
+            return result
+        if not entries:
+            result = ImportResult()
+            result.errors.append("No components found in IBOM file")
+            result.success = False
+            return result
         return self._import_entries(entries, device)
 
     def _process_pdf(self, file_path: str, device: Device) -> ImportResult:
@@ -188,6 +210,33 @@ class Orchestrator:
 
     def get_bom_entries(self, device_id: int) -> list[dict]:
         return self._db.get_bom_entries(device_id)
+
+    def ingest_mdf(self, mdf_file: str):
+        """Ingerisce un MDF (JSON/XML IPC-1752) e archivia il file grezzo in MongoDB.
+
+        L'archivio raw usa metadata ``{"kind": "mdf", ...}``. Il download dai
+        portali è un percorso separato (``mdf_portal``); qui si lavora sui file
+        locali. Il file raw viene salvato prima del parsing (anche se il parse
+        fallisce) così l'archivio Mongo rispecchia la fonte.
+        """
+        from ariadne.mdf_ingestor import MDFIngestor
+
+        path = Path(mdf_file)
+        raw = self._read_raw(mdf_file, path.suffix.lower())
+        if raw is not None:
+            self._raw.store(
+                filename=path.name,
+                file_format=path.suffix.lstrip("."),
+                content=raw,
+                metadata={"kind": "mdf", "path": str(path)},
+            )
+        return MDFIngestor(self._db).ingest(mdf_file)
+
+    def get_materials(self) -> list[dict]:
+        return self._db.get_materials()
+
+    def get_component_material_links(self, device_id: int | None = None) -> list[dict]:
+        return self._db.get_component_material_links(device_id)
 
     def close(self):
         self._ai.close()

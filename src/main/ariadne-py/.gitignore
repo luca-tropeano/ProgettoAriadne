@@ -5,6 +5,9 @@ ariadne.db
 demo.db
 *.db
 *.pdf
+# Fixture MDF PDF pubbliche (ZVEI / KEMET-YAGEO) versionate per demo e test
+!test_data/mdf_zvei_mlcc_example.pdf
+!test_data/mdf_kemet_c4ak_film.pdf
 .env
 .coverage
 htmlcov/

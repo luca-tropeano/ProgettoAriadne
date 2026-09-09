@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Fixture di prova: Material Composition Declaration (IPC-1752A Am3, Class D).
+     Struttura conforme allo schema ufficiale "IPC 1752A Amendment 3 Schema.xsd"
+     (targetNamespace http://webstds.ipc.org/175x/2.0). Dati riepilogativi e
+     realistici per un MLCC 0603 X5R 2.2uF (part number GRM188R61E225MA12D). -->
+<ipc:MainDeclaration xmlns:ipc="http://webstds.ipc.org/175x/2.0" version="2.0">
+  <ipc:BusinessInfo mode="requesting"/>
+  <ipc:Product unitType="Each">
+    <ipc:ProductID itemNumber="GRM188R61E225MA12D"
+                   itemName="CAP CER 2.2UF 25V X5R 0603"
+                   manufacturingSite="Fukui"
+                   effectiveDate="2024-03-01"
+                   version="1.0"/>
+    <ipc:ProductID itemNumber="GRM188R61E225K"
+                   requesterItemName="C melody"
+                   requesterItemNumber="2u2-GRM188R61E225MA12D"/>
+    <ipc:MaterialInfo>
+      <ipc:HomogeneousMaterialList>
+        <ipc:HomogeneousMaterial name="Ceramic dielectric" materialGroupName="Ceramic">
+          <ipc:Amount value="5.200" UOM="mg"/>
+          <ipc:SubstanceCategoryList>
+            <ipc:SubstanceCategoryListID identity="JIG101-3" authority="JIG" revision="3.0"/>
+            <ipc:SubstanceCategory name="Supplier">
+              <ipc:Substance name="Barium titanate">
+                <ipc:SubstanceID identity="12047-27-7" authority="CAS"/>
+                <ipc:Amount value="4.486" UOM="mg"/>
+                <ipc:Concentration value="86.27"/>
+              </ipc:Substance>
+              <ipc:Substance name="Nickel oxide">
+                <ipc:SubstanceID identity="1313-99-1" authority="CAS"/>
+                <ipc:Concentration value="3.50"/>
+              </ipc:Substance>
+              <ipc:Substance name="Lead" comment="rispetto sotto soglia REACH">
+                <ipc:SubstanceID identity="7439-92-1" authority="CAS"/>
+                <ipc:Amount value="0.00234" UOM="mg"/>
+                <ipc:Concentration value="0.0450"/>
+              </ipc:Substance>
+            </ipc:SubstanceCategory>
+          </ipc:SubstanceCategoryList>
+        </ipc:HomogeneousMaterial>
+        <ipc:HomogeneousMaterial name="Terminal electrode" materialGroupName="Terminal">
+          <ipc:Amount value="1.100" UOM="mg"/>
+          <ipc:SubstanceCategoryList>
+            <ipc:SubstanceCategoryListID identity="JIG101-3" authority="JIG" revision="3.0"/>
+            <ipc:SubstanceCategory name="Supplier">
+              <ipc:Substance name="Silver">
+                <ipc:SubstanceID identity="7440-22-4" authority="CAS"/>
+                <ipc:Amount value="1.078" UOM="mg"/>
+                <ipc:Concentration value="98.0"/>
+              </ipc:Substance>
+              <ipc:Substance name="Silicon dioxide">
+                <ipc:SubstanceID identity="7631-86-9" authority="CAS"/>
+                <ipc:Concentration value="2.0"/>
+              </ipc:Substance>
+            </ipc:SubstanceCategory>
+          </ipc:SubstanceCategoryList>
+        </ipc:HomogeneousMaterial>
+        <ipc:HomogeneousMaterial name="Ni/Sn plating" materialGroupName="Plating">
+          <ipc:Amount value="0.540" UOM="mg"/>
+          <ipc:SubstanceCategoryList>
+            <ipc:SubstanceCategoryListID identity="JIG101-3" authority="JIG" revision="3.0"/>
+            <ipc:SubstanceCategory name="Supplier">
+              <ipc:Substance name="Nickel">
+                <ipc:SubstanceID identity="7440-02-0" authority="CAS"/>
+                <ipc:Concentration value="65.0"/>
+              </ipc:Substance>
+              <ipc:Substance name="Tin">
+                <ipc:SubstanceID identity="7440-31-5" authority="CAS"/>
+                <ipc:Amount value="0.189" UOM="mg"/>
+                <ipc:Concentration value="35.0"/>
+              </ipc:Substance>
+            </ipc:SubstanceCategory>
+          </ipc:SubstanceCategoryList>
+        </ipc:HomogeneousMaterial>
+      </ipc:HomogeneousMaterialList>
+    </ipc:MaterialInfo>
+  </ipc:Product>
+</ipc:MainDeclaration>

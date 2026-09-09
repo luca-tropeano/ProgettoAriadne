@@ -121,3 +121,39 @@ def test_unsupported_format_fails(monkeypatch):
         orch.close()
     assert result.success is False
     assert any("Unsupported format" in e for e in result.errors)
+
+
+def test_process_ibom_end_to_end(tmp_path):
+    from tests.test_ibom_parser import PAYLOAD
+    p = tmp_path / "board_ibom.html"
+    p.write_text(
+        '<script>var pcbdata = JSON.parse(LZString.decompressFromBase64('
+        f'"{PAYLOAD}"));</script>',
+        encoding="utf-8",
+    )
+    orch = Orchestrator(
+        AppConfig(database=DatabaseConfig(url="sqlite:///:memory:"))
+    )
+    try:
+        result = orch.process_file(str(p), DEVICE)
+    finally:
+        orch.close()
+    assert result.success is True
+    assert result.total_rows == 2
+    assert result.imported_rows == 2
+    assert result.failed_rows == 0
+
+
+def test_process_ibom_invalid_fails(tmp_path):
+    p = tmp_path / "bad.html"
+    p.write_text("<html>no ibom</html>", encoding="utf-8")
+    orch = Orchestrator(
+        AppConfig(database=DatabaseConfig(url="sqlite:///:memory:"))
+    )
+    try:
+        result = orch.process_file(str(p), DEVICE)
+    finally:
+        orch.close()
+    assert result.success is False
+    assert any("IBOM" in e for e in result.errors)
+

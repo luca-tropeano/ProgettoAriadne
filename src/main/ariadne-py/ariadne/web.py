@@ -1,7 +1,7 @@
 """Ariadne Web UI — import BOM, visualizzazione, export, statistiche.
 
 Interfaccia web (Flask) che usa la stessa pipeline del CLI ma su browser:
-- Import di file BOM (xlsx/ods/csv/pdf) con campi dispositivo
+- Import di file BOM (xlsx/ods/csv/pdf/html) con campi dispositivo
 - Elenco devices e relativi componenti (con EEC)
 - Esportazione Excel di un device
 - Statistiche
@@ -26,7 +26,8 @@ from ariadne.orchestrator import Orchestrator
 UPLOAD_DIR = Path(__file__).resolve().parent / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-ALLOWED_EXT = {".xlsx", ".xls", ".ods", ".csv", ".pdf"}
+ALLOWED_EXT = {".xlsx", ".xls", ".ods", ".csv", ".pdf", ".html", ".htm"}
+ALLOWED_MDF_EXT = {".xml", ".json", ".pdf"}
 
 
 def create_app(config: AppConfig | None = None) -> Flask:
@@ -133,6 +134,51 @@ def create_app(config: AppConfig | None = None) -> Flask:
             return send_file(out, as_attachment=True, download_name=f"{device['model_name']}_bom.xlsx")
         finally:
             db.close()
+
+    @app.route("/materials")
+    def materials():
+        db = Database(config.database)
+        try:
+            materials = db.get_materials()
+            links = db.get_component_material_links()
+            return render_template("materials.html", materials=materials, links=links)
+        finally:
+            db.close()
+
+    @app.route("/mdf-import", methods=["GET", "POST"])
+    def mdf_import():
+        """Import di un Material Data File (JSON ad-hoc / XML IPC-1752 Class D / PDF)."""
+        if request.method == "POST":
+            file = request.files.get("mdf_file")
+            if not file or not file.filename:
+                flash("Seleziona un file MDF.", "error")
+                return redirect(url_for("mdf_import"))
+            ext = Path(file.filename).suffix.lower()
+            if ext not in ALLOWED_MDF_EXT:
+                flash(f"Formato MDF non supportato: {ext}", "error")
+                return redirect(url_for("mdf_import"))
+
+            saved = UPLOAD_DIR / file.filename
+            file.save(saved)
+            orch = Orchestrator(config)
+            try:
+                try:
+                    res = orch.ingest_mdf(str(saved))
+                except NotImplementedError as e:
+                    flash(f"[STUB] {e}", "error")
+                    return redirect(url_for("mdf_import"))
+            finally:
+                orch.close()
+            flash(
+                f"MDF importato: {res.materials_created} materiali creati, "
+                f"{res.materials_skipped} saltati, {res.links_created} link creati.",
+                "success",
+            )
+            return redirect(url_for("materials"))
+        return render_template(
+            "mdf_import.html",
+            allowed=", ".join(sorted(e.lstrip('.') for e in ALLOWED_MDF_EXT)),
+        )
 
     return app
 

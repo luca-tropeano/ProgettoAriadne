@@ -1,0 +1,15 @@
+{
+  "device_model": "Inkplate 5",
+  "materials": [
+    {"material_name": "Copper", "casrn": "7440-50-8", "category": "element"},
+    {"material_name": "Silicon", "casrn": "7440-21-3", "category": "element"},
+    {"material_name": "Tin", "casrn": "7440-31-5", "category": "element"},
+    {"material_name": "FR4", "category": "composite"}
+  ],
+  "links": [
+    {"reference_designator": "C14", "material_name": "Copper", "mass_mg": 18.0, "note": "esempio demo", "source_mdf": "MDF_GRM188R61E225MA12D.pdf"},
+    {"reference_designator": "Q8", "material_name": "Silicon", "mass_mg": 4.2, "note": "esempio demo", "source_mdf": "MDF_SOT23_NPN.pdf"},
+    {"reference_designator": "Q8", "material_name": "Tin", "mass_mg": 0.9, "note": "esempio demo", "source_mdf": "MDF_SOT23_NPN.pdf"},
+    {"reference_designator": "C14", "material_name": "FR4", "mass_mg": 2.5, "note": "substrato", "source_mdf": "MDF_GRM188R61E225MA12D.pdf"}
+  ]
+}

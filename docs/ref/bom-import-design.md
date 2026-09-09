@@ -1,10 +1,10 @@
 # BOM Import Pipeline — Specifica Tecnica
 
-**VERSIONE: 1.9** | **Data:** 12/08/2026 | **Autore:** Tropeano Luca
+**VERSIONE: 1.11** | **Data:** 09/09/2026 | **Autore:** Tropeano Luca
 
 ## Panoramica
 
-Pipeline Python (CLI) per importare file BOM da Excel (.xlsx), OpenDocument (.ods), CSV e PDF, classificare i componenti (EEC 16 categorie), controllare duplicati, esportare in Excel e archiviare i dati grezzi in MongoDB.
+Pipeline Python (CLI) per importare file BOM da Excel (.xlsx), OpenDocument (.ods), CSV, PDF e KiCad InteractiveHtmlBom (.html), classificare i componenti (EEC 16 categorie), controllare duplicati, esportare in Excel e archiviare i dati grezzi in MongoDB.
 
 **Flussi supportati:**
 - **Excel (.xlsx)** → openpyxl parser → SQLite / Strapi API
@@ -13,6 +13,8 @@ Pipeline Python (CLI) per importare file BOM da Excel (.xlsx), OpenDocument (.od
 - **PDF (.pdf) con testo estraibile** → pdfplumber → **parser diretto (regex)** → SQLite / Strapi API
 - **PDF (.pdf) non riconosciuto dal parser diretto** → **DeepSeek AI (fallback, disabilitato di default)** → SQLite / Strapi API
 - **PDF scannerizzato/immagine** → non ancora supportato (pianificato: OCR/AI in fasi successive)
+- **KiCad InteractiveHtmlBom (`.html`/`.htm`)** → ibom_parser (LZ-String `pcbdata`, preferenza `bom.both`, fallback F/B) → SQLite / Strapi API
+- **MDF (Material Data File)** → mdf_ingestor: JSON ad-hoc + **XML IPC-1752A/B Class D** (ipc1752.py) + **PDF Material Declaration** (mdf_pdf_parser.py, layout ZVEI per-componente e KEMET/YAGEO per-serie) popolano `material` + `component_material`; matching per part number
 
 **Funzionalità trasversali:**
 - Classificazione EEC automatica (16 categorie) dai reference designator
@@ -39,6 +41,8 @@ ariadne-py/
 │   ├── excel_parser.py             # Parsing Excel (openpyxl)
 │   ├── ods_parser.py               # Parsing OpenDocument (.ods, schema dinamico)
 │   ├── csv_parser.py               # Parsing CSV (KiCad/EasyEDA, auto-detect)
+│   ├── ibom_parser.py              # Parsing KiCad InteractiveHtmlBom (.html, LZ-String pcbdata)
+│   ├── lzstring.py                 # Decompressore LZ-String (base64) puro-Python per IBOM
 │   ├── pdf_extractor.py            # Estrazione testo PDF (pdfplumber)
 │   ├── pdf_parser.py               # Parser diretto BOM da testo (regex, senza AI)
 │   ├── ai_client.py                # Client DeepSeek (OpenAI-compatibile, fallback)
@@ -46,18 +50,30 @@ ariadne-py/
 │   ├── eec.py                      # Classificazione EEC 16 categorie
 │   ├── export.py                   # Export database → Excel
 │   ├── mongo_store.py              # Archivio dati grezzi MongoDB (opzionale)
-│   ├── strapi_client.py            # Client Strapi REST (Device/BOMEntry sync)
+│   ├── mdf_ingestor.py             # Ingestione MDF (JSON ad-hoc, XML IPC-1752 Class D, PDF)
+│   ├── mdf_pdf_parser.py           # Parser Material Declaration PDF (pdfplumber, ZVEI/KEMET)
+│   ├── ipc1752.py                  # Parser IPC-1752A/B Class D (XML materiali omogenei)
+│   ├── mdf_portal.py               # Downloader MDF dai portali (ricerca + harvest XML)
+│   ├── strapi_client.py            # Client Strapi REST (Device/BOMEntry/Material sync)
 │   └── sftp_client.py              # Upload SFTP (paramiko)
 └── tests/
     ├── __init__.py
     ├── test_excel_parser.py         # pytest — parser Excel
     ├── test_pdf_parser.py           # pytest — parser PDF diretto
+    ├── test_pdf_extractor.py        # pytest — estrazione testo PDF
+    ├── test_csv_parser.py           # pytest — parser CSV
+    ├── test_ods_parser.py           # pytest — parser ODS
+    ├── test_ibom_parser.py          # pytest — parser InteractiveHtmlBom
+    ├── test_lzstring.py             # pytest — decompressore LZ-String
     ├── test_ai_client.py            # pytest — risposte DeepSeek + cost tracking
-    ├── test_orchestrator.py         # pytest — flussi Excel/PDF, AI fallback
+    ├── test_orchestrator.py         # pytest — flussi Excel/PDF/IBOM, AI fallback
     ├── test_new_features.py         # pytest — duplicati, EEC, export
     ├── test_mongo_store.py          # pytest — archivio raw MongoDB (online/offline)
-    ├── test_strapi_client.py        # pytest — client Strapi (upsert, push, auth)
-    ├── test_web.py                  # pytest — Web UI (import, dettaglio, export, stats)
+    ├── test_strapi_client.py        # pytest — client Strapi (upsert, push, auth, materials)
+    ├── test_web.py                  # pytest — Web UI (import, dettaglio, export, stats, MDF)
+    ├── test_mdf_ingestor.py         # pytest — ingestione MDF (JSON + XML + PDF, link part number)
+    ├── test_mdf_pdf_parser.py       # pytest — parser PDF MDF (layout ZVEI/KEMET, mg/gr)
+    ├── test_mdf_portal.py           # pytest — downloader MDF dai portali (client mock)
     └── test_models.py               # pytest — modelli pydantic
 ```
 
@@ -108,7 +124,7 @@ def stats(ctx):
     click.echo(f"Materials:   {s['materials']}")
 ```
 
-**Auto-rilevamento formato:** Estensione file determina il flusso: `.xlsx` → Excel, `.pdf` → PDF.
+**Auto-rilevamento formato:** Estensione file determina il flusso: `.xlsx` → Excel, `.ods` → ODS, `.csv` → CSV, `.pdf` → PDF, `.html`/`.htm` → IBOM. Formato non riconosciuto → errore "Unsupported format".
 
 ## Orchestrator — Coordinatore
 
@@ -124,8 +140,14 @@ class Orchestrator:
         ext = Path(file_path).suffix.lower()
         if ext in (".xlsx", ".xls"):
             return self._process_excel(file_path, device)
+        elif ext == ".ods":
+            return self._process_ods(file_path, device)
+        elif ext == ".csv":
+            return self._process_csv(file_path, device)
         elif ext == ".pdf":
             return self._process_pdf(file_path, device)
+        elif ext in (".html", ".htm"):
+            return self._process_ibom(file_path, device)
         else:
             result = ImportResult(success=False)
             result.errors.append(f"Unsupported format: {ext}")
@@ -275,6 +297,39 @@ File: `ariadne/csv_parser.py`
 - Gestisce flag DoNotPopulate, Gender, Supplier
 - Supporta file `.csv` e `.txt` con lo stesso formato
 
+## ibom_parser.py — Parsing KiCad InteractiveHtmlBom (.html)
+
+File: `ariadne/ibom_parser.py`
+
+- Legge il file `.html`/`.htm` exportato da KiCad **InteractiveHtmlBom** (plugin IBOM)
+- Estrae il payload `var pcbdata = JSON.parse(LZString.decompressFromBase64("..."))` tramite regex
+- **`lzstring.py`**: decompressore LZ-String base64 puro-Python (senza dipendenze), port fedele dell'algoritmo di riferimento
+- Legge `pcbdata.bom.fields` (`{ index: [value, footprint] }`), `pcbdata.bom.both`/`F`/`B` (gruppi di `[ref, value_index]`) e `pcbdata.bom.skipped` (Do-Not-Populate)
+- Preferenza **`bom.both`** (tabella BOM completa); se vuoto usa i layer `F`/`B` — evita doppio conteggio quando `both` è popolato e `F`/`B` lo duplicano
+- Ogni gruppo diventa un `BOMEntry` (quantity = numero di ref, designator uniti con virgola)
+- SMT/THT dedotto dal footprint via `_detect_mounting_type()`
+
+## mdf_ingestor.py + ipc1752.py + mdf_pdf_parser.py — Ingestione MDF (JSON ad-hoc + IPC-1752 Class D + PDF)
+
+File: `ariadne/mdf_ingestor.py`, `ariadne/ipc1752.py`, `ariadne/mdf_pdf_parser.py`
+
+- Obiettivo: estrarre i materiali dai MDF (sia XML IPC-1752 sia PDF di Material Declaration dei produttori) e collegarli alle BOMEntry
+- **Percorso JSON (ad-hoc):** `ingest_from_json(path)` — `materials` + `links`, con `device_model` per risolvere i reference; popola `material` + `component_material`
+- I link risolvono un reference anche dentro gruppi già uniti con virgola (es. "C1" in "C1,C2") via `Database.find_bom_entry_by_ref()`
+- **Percorso XML (standard IPC-1752):** `ingest_from_xml(path)` — legge una **Material Composition Declaration Class D** (IPC-1752A/B, schema ufficiale `http://webstds.ipc.org/175x/2.0`, root `MainDeclaration`)
+  - Parser `ariadne/ipc1752.py::parse_class_d_xml()`: namespace-agnostico (match su nomi locali), estrae `Product` → `ProductID@itemNumber`, `HomogeneousMaterial` (`@name`, `@materialGroupName`, `Amount@value/UOM`) → `Substance` (`@name`, `SubstanceID@identity=CAS`, `Amount`, `Concentration@value`)
+  - Matching verso la BOM **per part number** (`Database.find_bom_entry_by_part_number()`, normalizzazione maiuscolo/trattini; matcha anche MPN incastonati nel `part_value`, es. `2u2-GRM188R61E225MA12D`)
+  - Massa del link: `Amount` assoluto (mg/g/kg → mg) oppure `concentrazione% × massa_materiale_omogeneo`; 0 se non dichiarata
+  - Esempio schema-conforme: `test_data/mdf_class_d_sample.xml` (MLCC 2.2uF Murata, 3 materiali omogenei, 7 sostanze con CAS) — al demo linka alle C14/C15 reali di Inkplate 5
+- **Percorso PDF:** `ingest_from_pdf(path)` → `parse_pdf_mdf()` (pdfplumber `extract_tables`) riconosce la riga di header sostanze (`Substance Name`/`Substance` + CAS + colonna peso) e produce una lista piatta di `DeclaredSubstance`
+  - Layout **ZVEI per-componente**: header a 12 colonne (`Substance Name`, `CAS #`, `Weight [mg]`, `Mass Percent`), massa totale dal metadata (`Mass`/`Unit`); righe con CAS placeholder (`system`, `pseudo substance`, `-`, `Multi`) scartate con warning; righe duplicate della stessa sostanza (nome+CAS) sommato
+  - Layout **KEMET/YAGEO per-serie**: colonne `Substance`/`CAS No.` + più colonne `Weight (gr)` (una per variante di taglia) — scelta la prima colonna peso a destra del CAS, grammi → mg
+  - Part number candidati estratti dal testo (pattern Murata `GRM...`, KEMET `C…`/`L…`): se trovati in BOM → link; altrimenti **solo materiali** con warning
+  - Esempi reali: `test_data/mdf_zvei_mlcc_example.pdf` (MLCC 0603 da 6,3 mg → 4 sostanze) e `test_data/mdf_kemet_c4ak_film.pdf` (serie DC-Link → 15 sostanze)
+- `Database.insert_material()` (dedupe per `material_name`), `Database.link_material()` (dedupe per coppia), `Database.get_materials()` (con conteggio `linked_entries`)
+- Comando CLI: `ariadne mdf-ingest <file.json|file.xml|file.pdf>` (JSON/XML/PDF → label del percorso nel report, exit 0); il file grezzo viene archiviato in MongoDB (metadata `kind=mdf`) prima del parse
+- Comando CLI: `ariadne mdf-download <PART_NUMBER> [--source auto|murata|digikey|mouser|bomcheck|octopart|url:https://...] [--out-dir DIR]` — scarica l'MDF (XML IPC-1752) dai portali pubblici e lo valida col parser
+
 ## ods_parser.py — Parsing OpenDocument (.ods)
 
 File: `ariadne/ods_parser.py`
@@ -336,9 +391,22 @@ File: `ariadne/strapi_client.py`
 - Autenticazione **Bearer token** (`Authorization: Bearer <token>`)
 - `upsert_device(device)` → cerca per `modelName`, **crea** (POST) o **aggiorna** (PUT); ritorna l'id Strapi
 - `push_bom_entry(device, entry, device_strapi_id)` → crea un BOMEntry collegato al device (relazione)
-- `sync_device(device, entries)` → upsert device + push di tutte le BOMEntry; ritorna `{device_id, entries_pushed}`
-- Campi Strapi in camelCase (`yearOfProduction`, `referenceDesignator`, `eecCategoryId`, ...)
+- `sync_device(device, entries)` → upsert device + push di tutte le BOMEntry; ritorna `{device_id, entries_pushed, entry_strapi_ids}` dove `entry_strapi_ids` contiene l'id Strapi di ogni entry **nello stesso ordine** delle entries passate (serve al `strapi-sync --materials` per collegare i materiali alla entry giusta)
+- `upsert_material(material)` → upsert per `materialName` univoco (POST/PUT) su `materials`; ritorna l'id Strapi
+- `push_component_material(entry_sid, material_sid, mass_mg, note, source_mdf)` → crea il link su `component-materials` (relazioni BOMEntry ↔ Material)
+- Campi Strapi in camelCase (`yearOfProduction`, `referenceDesignator`, `eecCategoryId`, `casrn`, `massMg`, `sourceMdf`, ...)
 - **Nota**: Strapi usa PostgreSQL (prod) / SQLite (dev); MongoDB resta solo per i dati grezzi
+
+## mdf_portal.py — Downloader MDF dai portali (percorso ONLINE)
+
+File: `ariadne/mdf_portal.py`, CLI: `ariadne mdf-download <PART_NUMBER>`
+
+- I portali (Murata, DigiKey, Mouser, BOMcheck, Octopart) **non espongono un'API documentata** per le Material Declaration → downloader "ad harvest": costruisce le URL di ricerca per il part number, scarica la pagina, estrae i link candidati (pattern tipici: ipc/1752/mcd/material/composition/declaration/rohs/reach + estensione xml/pdf/csv/zip), li ordina per punteggio
+- I candidati **XML** vengono scaricati e **validati parseando come IPC-1752 Class D** (`ipc1752.parse_class_d_xml()`); il primo XML valido viene salvato come `<PART>_mdf.xml` in `--out-dir` (default `mdf_downloads`)
+- I candidati non-XML (o XML non validi) vengono riportati in `DownloadResult.found`; gli errori di rete in `errors`
+- Client HTTP **iniettabile** (`MDFPortalDownloader(client=...)`): i test usano un finto client duck-typed (`.get(url)` → `.text`/`.raise_for_status()`) senza rete
+- Source: `auto` (prova tutti i portali in ordine, si ferma al primo MDF valido) | `murata`/`digikey`/`mouser`/`bomcheck`/`octopart` | `url:https://...` (link diretto)
+- La **demo resta offline**: questo percorso è opzionale e richiede rete
 
 ## web.py — Web UI (Flask)
 
@@ -346,9 +414,12 @@ File: `ariadne/web.py`, template in `ariadne/templates/`
 
 - `create_app(config)` → app Flask che condivide lo stesso DB SQLite della CLI
 - Rotta `/` — elenco dispositivi con statistiche
-- Rotta `/import` — upload BOM (xlsx/xls/ods/csv/pdf) + campi device; redirect al dettaglio del device
+- Rotta `/import` — upload BOM (xlsx/xls/ods/csv/pdf/html) + campi device; redirect al dettaglio del device
 - Rotta `/device/<id>` — dettaglio device con componenti e categoria EEC
 - Rotta `/device/<id>/export` — download Excel del device
+- Rotta `/materials` — pagina Materiali: tabella materiali dichiarati (con conteggio componenti collegati) + tabella link componente→materiale (mass_mg, fonte MDF, note)
+- Rotta `/mdf-import` — upload di un MDF (XML IPC-1752 Class D / JSON ad-hoc); popola materiali + link e archivia il file grezzo in MongoDB (metadata `kind=mdf`); redirect a `/materials`
+- Nav comune (Home, Import BOM, Import MDF, Materiali) in tutti i template
 - Rotta `/api/stats` — statistiche in JSON
 - Avvio: `python -m ariadne.web` → http://127.0.0.1:5000
 - Nessuna dipendenza da Strapi: la UI lavora sui dati locali; la sincronizzazione è separata
@@ -440,22 +511,29 @@ pip install -e ".[dev]"
 pytest tests/ --verbose
 ```
 
-**115 test, tutti passanti.**
+**186 test, tutti passanti (91% coverage).**
 
 | File | # Test | Cosa verifica |
 |------|--------|---------------|
-| test_models.py | 6 | BOMEntry, Device, ImportResult |
+| test_models.py | 5 | BOMEntry, Device, ImportResult |
 | test_excel_parser.py | 6 | SMT/THT detection + parse reale |
 | test_ods_parser.py | 6 | Parse ODS, THT, meta rows, BOM reale HILTOP |
 | test_pdf_parser.py | 10 | Parsing BOM PDF diretto (designator, quantità, package, THT, manufacturer, campione reale) |
 | test_pdf_extractor.py | 4 | pdfplumber testo PDF + stream |
-| test_ai_client.py | 11 | DeepSeek parsing/cost + mock HTTP |
-| test_csv_parser.py | 20 | CSV KiCad/EasyEDA, delimitatori, DNP, reali AMIGA/Inkplate |
-| test_orchestrator.py | 9 | Flussi Excel/CSV/PDF/ODS, AI fallback, duplicati |
+| test_ai_client.py | 12 | DeepSeek parsing/cost + mock HTTP |
+| test_csv_parser.py | 19 | CSV KiCad/EasyEDA, delimitatori, DNP, reali AMIGA/Inkplate |
+| test_ibom_parser.py | 6 | Parse IBOM: gruppi, quantità, preferenza `both`, fallback F/B, DNP, errori |
+| test_lzstring.py | 5 | Decompressore LZ-String base64 (vector noti, None/empty, input malformato) |
+| test_orchestrator.py | 9 | Flussi Excel/CSV/PDF/ODS/IBOM, AI fallback, duplicati |
 | test_new_features.py | 19 | Duplicati, EEC, export Excel |
 | test_mongo_store.py | 13 | Raw store offline/online (mock) |
 | test_sftp_client.py | 9 | SFTP mock |
-| test_cli.py | 5 | CLI end-to-end |
+| test_cli.py | 12 | CLI end-to-end (process, stats, strapi-sync + --materials, mdf-ingest json/xml/pdf, mdf-download) |
+| test_strapi_client.py | 10 | Client Strapi (upsert device/material, push bom-entry/component-material, auth, sync con entry_strapi_ids) |
+| test_mdf_ingestor.py | 17 | Ingestione MDF: JSON, IPC-1752 Class D XML (parser/massa/matching part), link query, dedupe, group ref, PDF reale ZVEI, dispatcher |
+| test_mdf_pdf_parser.py | 3 | Parser PDF MDF (tabelle sintetiche): layout ZVEI (merge sostanze, intervalli pct), KEMET gr→mg, part number da testo |
+| test_mdf_portal.py | 6 | Downloader MDF dai portali: harvest, validazione Class D, candidati non validi, source sconosciuto, stop al primo valido |
+| test_web.py | 16 | Web UI (import csv/html, dettaglio, export, stats, /materials, /mdf-import xml+pdf) |
 
 ## Risultati reali
 
@@ -467,7 +545,12 @@ pytest tests/ --verbose
 | e-radionica Inkplate 5 | CSV EasyEDA | 71 | 71/71 |
 | Raspberry Pi CM5 IO Board | CSV KiCad | 35 | 35/35 |
 | Devtank HILTOP Motherboard | ODS | 160 | 160/160 |
-| **Totale** | | **510** | **510/510** |
+| Oric Remix Issue A (v1.2) | KiCad IBOM (.html) | 127 ref / 76 gruppi | 76/76 |
+| **Totale** | | **637** | **586/586** |
+
+**MDF IPC-1752 reale (end-to-end):** `test_data/mdf_class_d_sample.xml` (MLCC Murata 2.2uF `GRM188R61E225MA12D`) → 7 materiali (Barium titanate, Nickel oxide, Lead, Silver, Silicon dioxide, Nickel, Tin) con CAS, linkati alle C14/C15 di Inkplate 5 con massa calcolata da concentrazione × massa del materiale omogeneo.
+
+**MDF PDF reali:** `test_data/mdf_zvei_mlcc_example.pdf` (dichiarazione per-componente ZVEI, MLCC 0603, massa totale 6,3 mg) → 4 sostanze (barium/nickel/copper/tin, massa in mg, part number assente → materials senza link con warning); `test_data/mdf_kemet_c4ak_film.pdf` (dichiarazione di serie KEMET/YAGEO DC-Link, peso in grammi per variante) → 15 sostanze.
 
 ## CLI Usage
 
@@ -476,6 +559,12 @@ ariadne process "BOM.xlsx" --brand STM --model STEVAL-SPIN3204
 ariadne process "BOM.ods" --brand Devtank --model "HILTOP Motherboard"
 ariadne process "BOM.csv" --brand Commodore --model "Amiga 2000"
 ariadne process "BOM.pdf" --brand STM --model STEVAL-SPIN3204   # parser diretto, AI solo se serve
+ariadne process "board_ibom.html" --brand Oric --model "Oric Remix Issue A"
+ariadne mdf-ingest "test_data/mdf_sample.json"          # MDF ad-hoc (JSON)
+ariadne mdf-ingest "test_data/mdf_class_d_sample.xml"    # MDF IPC-1752A/B Class D (XML)
+ariadne mdf-ingest "test_data/mdf_zvei_mlcc_example.pdf"  # MDF PDF (layout ZVEI/KEMET, pdfplumber)
+ariadne mdf-download GRM188R61E225MA12D --source digikey  # online: scarica l'MDF dal portale
+ariadne strapi-sync --materials                          # device+entries+materiali verso Strapi
 ariadne stats
 ```
 

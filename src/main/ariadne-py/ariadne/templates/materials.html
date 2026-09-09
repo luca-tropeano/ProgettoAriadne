@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="utf-8">
+    <title>Ariadne — Materiali</title>
+    <style>
+        body { font-family: sans-serif; margin: 2rem; }
+        nav a { margin-right: 1rem; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+        th { background: #f0f0f0; }
+        .ok { color: green; }
+        .err { color: red; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="{{ url_for('index') }}">Home</a>
+        <a href="{{ url_for('import_bom') }}">Import BOM</a>
+        <a href="{{ url_for('mdf_import') }}">Import MDF</a>
+        <a href="{{ url_for('materials') }}">Materiali</a>
+    </nav>
+    <h1>Materiali MDF</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <p class="{{ category }}">{{ message }}</p>
+        {% endfor %}
+    {% endwith %}
+
+    <h2>Materiali dichiarati</h2>
+    {% if materials %}
+        <table>
+            <tr>
+                <th>Materiale</th>
+                <th>CAS RN</th>
+                <th>Categoria</th>
+                <th>Componenti collegati</th>
+            </tr>
+            {% for m in materials %}
+            <tr>
+                <td>{{ m.material_name }}</td>
+                <td>{{ m.casrn or '—' }}</td>
+                <td>{{ m.category }}</td>
+                <td>{{ m.linked_entries }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>Nessun materiale. <a href="{{ url_for('mdf_import') }}">Importa un MDF</a>.</p>
+    {% endif %}
+
+    <h2>Collegamenti componente → materiale</h2>
+    {% if links %}
+        <table>
+            <tr>
+                <th>Device</th>
+                <th>Ref. Des.</th>
+                <th>Value</th>
+                <th>Materiale</th>
+                <th>CAS RN</th>
+                <th>Massa (mg)</th>
+                <th>Fonte MDF</th>
+                <th>Note</th>
+            </tr>
+            {% for l in links %}
+            <tr>
+                <td>{{ l.brand }} {{ l.model_name }}</td>
+                <td>{{ l.reference_designator }}</td>
+                <td>{{ l.part_value }}</td>
+                <td>{{ l.material_name }}</td>
+                <td>{{ l.casrn or '—' }}</td>
+                <td>{{ l.mass_mg }}</td>
+                <td>{{ l.source_mdf or '—' }}</td>
+                <td>{{ l.note or '—' }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>Nessun link materiale↔componente.</p>
+    {% endif %}
+</body>
+</html>

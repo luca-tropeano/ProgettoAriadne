@@ -4,7 +4,14 @@ import sqlite3
 from pathlib import Path
 
 from ariadne.config import DatabaseConfig
-from ariadne.models import BOMEntry, Device, ImportResult
+from ariadne.models import BOMEntry, Device, ImportResult, Material
+
+
+def _normalize_part(value: str | None) -> str:
+    """MPN normalizzato per confronti (maiuscolo, senza spazi/trattini)."""
+    if not value:
+        return ""
+    return "".join(ch for ch in value.upper() if not ch.isspace() and ch != "-")
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS device (
@@ -123,6 +130,124 @@ class Database:
             "SELECT * FROM bom_entry WHERE device_id = ? ORDER BY item_number",
             (device_id,),
         ).fetchall()
+        return [dict(r) for r in rows]
+
+    def find_bom_entry_by_ref(self, device_id: int, reference: str) -> dict | None:
+        """Trova una BOMEntry del device che contiene il reference (anche in un gruppo)."""
+        reference = (reference or "").strip()
+        if not reference:
+            return None
+        for row in self._conn.execute(
+            "SELECT * FROM bom_entry WHERE device_id = ?", (device_id,)
+        ):
+            des = row["reference_designator"]
+            parts = [d.strip() for d in des.split(",")]
+            if des == reference or reference in parts:
+                return dict(row)
+        return None
+
+    def find_bom_entry_by_part_number(self, part_number: str) -> list[dict]:
+        """Trova le BOMEntry il cui part number (MPN) matcherà ``part_number``.
+
+        Confronto best-effort sui campi ``manufacturer_order_code``,
+        ``part_value`` e ``supplier_order_code`` con una normalizzazione
+        (maiuscolo, spazi e trattini rimossi). Supporta anche part number
+        incorporati nel ``part_value`` (es. "2u2-GRM188R61E225MA12D").
+        """
+        target = _normalize_part(part_number)
+        if not target:
+            return []
+        matches: list[dict] = []
+        for row in self._conn.execute("SELECT * FROM bom_entry").fetchall():
+            for field in ("manufacturer_order_code", "part_value", "supplier_order_code"):
+                value = _normalize_part(row[field])
+                if not value:
+                    continue
+                if value == target or value in target or target in value:
+                    matches.append(dict(row))
+                    break
+        return matches
+
+    def insert_material(self, material: Material) -> int | None:
+        """Inserisce un materiale (per material_name univoco). Ritorna id o None se duplicato."""
+        existing = self._conn.execute(
+            "SELECT id FROM material WHERE material_name = ?",
+            (material.material_name,),
+        ).fetchone()
+        if existing:
+            return None
+
+        cur = self._conn.execute(
+            "INSERT INTO material (material_name, casrn, category) VALUES (?, ?, ?)",
+            (material.material_name, material.casrn, material.category),
+        )
+        self._conn.commit()
+        return cur.lastrowid
+
+    def get_material_id(self, material_name: str) -> int | None:
+        row = self._conn.execute(
+            "SELECT id FROM material WHERE material_name = ?",
+            (material_name,),
+        ).fetchone()
+        return row["id"] if row else None
+
+    def link_material(
+        self,
+        bom_entry_id: int,
+        material_id: int,
+        mass_mg: float = 0.0,
+        note: str | None = None,
+        source_mdf: str | None = None,
+    ) -> int | None:
+        """Collega un materiale a una BOMEntry. Ritorna id o None se già collegato."""
+        existing = self._conn.execute(
+            "SELECT id FROM component_material WHERE bom_entry_id = ? AND material_id = ?",
+            (bom_entry_id, material_id),
+        ).fetchone()
+        if existing:
+            return None
+
+        cur = self._conn.execute(
+            "INSERT INTO component_material (bom_entry_id, material_id, mass_mg, note, source_mdf) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (bom_entry_id, material_id, mass_mg, note, source_mdf),
+        )
+        self._conn.commit()
+        return cur.lastrowid
+
+    def get_materials(self) -> list[dict]:
+        """Lista materiali con conteggio di BOMEntry collegate."""
+        rows = self._conn.execute(
+            "SELECT m.id, m.material_name, m.casrn, m.category, "
+            "COUNT(cm.id) AS linked_entries "
+            "FROM material m "
+            "LEFT JOIN component_material cm ON cm.material_id = m.id "
+            "GROUP BY m.id ORDER BY m.material_name"
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_component_material_links(self, device_id: int | None = None) -> list[dict]:
+        """Link materiale↔BOMEntry (per device se indicato), per la UI/demo.
+
+        Ogni riga: material_name, casrn, category, mass_mg, note, source_mdf,
+        bom_entry_id, reference_designator, part_value, device model/brand.
+        """
+        sql = (
+            "SELECT cm.id AS link_id, cm.bom_entry_id, cm.mass_mg, cm.note, cm.source_mdf, "
+            "m.material_name, m.casrn, m.category, "
+            "be.reference_designator, be.part_value, be.manufacturer, "
+            "d.model_name, d.brand "
+            "FROM component_material cm "
+            "JOIN material m ON m.id = cm.material_id "
+            "JOIN bom_entry be ON be.id = cm.bom_entry_id "
+            "JOIN device d ON d.id = be.device_id "
+        )
+        params: tuple = ()
+        if device_id is not None:
+            sql += "WHERE be.device_id = ? "
+            params = (device_id,)
+        sql += "ORDER BY m.material_name, d.model_name, be.reference_designator"
+        rows = self._conn.execute(sql, params).fetchall()
         return [dict(r) for r in rows]
 
     def get_all_devices(self) -> list[dict]:

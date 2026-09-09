@@ -4,8 +4,8 @@ import json
 
 import httpx
 
-from ariadne.models import BOMEntry, Device
-from ariadne.strapi_client import BOM_ENTRY_EP, DEVICE_EP, StrapiClient
+from ariadne.models import BOMEntry, Device, Material
+from ariadne.strapi_client import BOM_ENTRY_EP, COMPONENT_MATERIAL_EP, DEVICE_EP, MATERIAL_EP, StrapiClient
 
 DEVICE = Device(brand="STM", model_name="STEVAL-SPIN3204", manufacturer="STMicroelectronics")
 
@@ -117,10 +117,76 @@ def test_sync_device_pushes_device_and_entries():
         res = client.sync_device(DEVICE, entries)
     finally:
         client.close()
-    assert res == {"device_id": 10, "entries_pushed": 2}
+    assert res == {"device_id": 10, "entries_pushed": 2, "entry_strapi_ids": [1, 1]}
     posts = [r for r in log if r.method == "POST"]
     bom_posts = [r for r in posts if "/api/bom-entries" in r.url.path]
     assert len(bom_posts) == 2
+
+
+def test_upsert_material_creates_when_not_found():
+    log = []
+    material = Material(material_name="Barium titanate", casrn="12047-27-7", category="element")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        log.append(request)
+        if request.method == "GET":
+            return httpx.Response(200, json={"data": []})
+        return httpx.Response(200, json={"data": {"id": 33}})
+
+    client = _client_with_transport(handler)
+    try:
+        mid = client.upsert_material(material)
+    finally:
+        client.close()
+    assert mid == 33
+    assert log[0].method == "GET"
+    assert log[1].method == "POST"
+    body = json.loads(log[1].content)
+    assert body["data"]["materialName"] == "Barium titanate"
+    assert body["data"]["casrn"] == "12047-27-7"
+    assert "/api/materials" in log[1].url.path
+
+
+def test_upsert_material_updates_when_exists():
+    log = []
+    material = Material(material_name="Copper", casrn="7440-50-8", category="element")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        log.append(request)
+        if request.method == "GET":
+            return httpx.Response(200, json={"data": [{"id": 7}]})
+        return httpx.Response(200, json={"data": {"id": 7}})
+
+    client = _client_with_transport(handler)
+    try:
+        mid = client.upsert_material(material)
+    finally:
+        client.close()
+    assert mid == 7
+    assert [r.method for r in log] == ["GET", "PUT"]
+    assert "/api/materials/7" in log[1].url.path
+
+
+def test_push_component_material_posts_payload():
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["body"] = json.loads(request.content)
+        seen["url_path"] = request.url.path
+        return httpx.Response(200, json={"data": {"id": 55}})
+
+    client = _client_with_transport(handler)
+    try:
+        cid = client.push_component_material(1, 2, mass_mg=12.5, note="IPC tip", source_mdf="mdf.xml")
+    finally:
+        client.close()
+    assert cid == 55
+    body = seen["body"]["data"]
+    assert body["massMg"] == 12.5
+    assert body["bomEntry"] == 1
+    assert body["material"] == 2
+    assert body["sourceMdf"] == "mdf.xml"
+    assert "/api/component-materials" in seen["url_path"]
 
 
 def test_auth_header_on_all_methods():

@@ -2,12 +2,10 @@
 <html lang="it">
 <head>
     <meta charset="utf-8">
-    <title>Ariadne — Import BOM</title>
+    <title>Ariadne — Import MDF</title>
     <style>
         body { font-family: sans-serif; margin: 2rem; }
         nav a { margin-right: 1rem; }
-        label { display: inline-block; width: 130px; }
-        .field { margin-bottom: 0.5rem; }
         .ok { color: green; }
         .err { color: red; }
     </style>
@@ -19,7 +17,13 @@
         <a href="{{ url_for('mdf_import') }}">Import MDF</a>
         <a href="{{ url_for('materials') }}">Materiali</a>
     </nav>
-    <h1>Import BOM</h1>
+    <h1>Import MDF (Material Data File)</h1>
+    <p>
+        Carica una "Material Composition Declaration": <strong>XML IPC-1752A/B
+        Class D</strong> dal produttore, oppure un <strong>JSON ad-hoc</strong>
+        (formato della demo). I materiali vengono popolati e collegati alle
+        BOMEntry il cui part number matcherà l'itemNumber dichiarato.
+    </p>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% for category, message in messages %}
@@ -28,11 +32,8 @@
     {% endwith %}
 
     <form method="post" enctype="multipart/form-data">
-        <div class="field"><label>File BOM</label><input type="file" name="bom_file" required accept=".xlsx,.xls,.ods,.csv,.pdf,.html,.htm"></div>
-        <div class="field"><label>Brand</label><input type="text" name="brand"></div>
-        <div class="field"><label>Modello</label><input type="text" name="model" placeholder="es. STEVAL-SPIN3204"></div>
-        <div class="field"><label>Produttore</label><input type="text" name="manufacturer"></div>
-        <div class="field"><label>Anno</label><input type="number" name="year" min="1900" max="2030"></div>
+        <label>File MDF</label>
+        <input type="file" name="mdf_file" required accept=".xml,.json">
         <button type="submit">Importa</button>
     </form>
     <p>Formati supportati: {{ allowed }}</p>
