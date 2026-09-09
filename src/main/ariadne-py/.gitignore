@@ -2,6 +2,8 @@ __pycache__/
 *.pyc
 *.egg-info/
 ariadne.db
+demo.db
+*.db
 *.pdf
 .env
 .coverage

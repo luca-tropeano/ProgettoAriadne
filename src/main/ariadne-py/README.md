@@ -34,6 +34,12 @@ python -m ariadne.web
 ariadne strapi-sync
 ```
 
+**Demo (presentazione):** avvia Web UI con 2 BOM reali già importate (231 componenti)
+
+```bash
+powershell -ExecutionPolicy Bypass -File run_demo.ps1
+```
+
 ## Formati supportati
 
 | Formato | Estensione | Parser | Note |
