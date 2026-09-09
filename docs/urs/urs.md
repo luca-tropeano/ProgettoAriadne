@@ -2,7 +2,7 @@
 
 ##### DIBRIS – University of Genoa. Polytechnic School, Software Engineering Course 80154
 
-**VERSION : 1.7**
+**VERSION : 1.8**
 
 **Authors**
 Tropeano Luca
@@ -19,6 +19,7 @@ Tropeano Luca
 | 1.5     | 12/08/2026 | Tropeano | CSV import support (FR9), EEC auto-classification (FR7), duplicate BOM check, DB→Excel export (FR14), DeepSeek AI as paid fallback. 47 tests, 350/350 components from 5 real BOMs. |
 | 1.6     | 12/08/2026 | Tropeano | MongoDB raw-data storage (NFR8 data retention): raw documents archived before processing. Optional, offline degradation. 54 tests. |
 | 1.7     | 12/08/2026 | Tropeano | OpenDocument (.ods) import support (FR9): dynamic schema, real HILTOP Motherboard BOM (160/160). 115 tests, 93% coverage. |
+| 1.8     | 12/08/2026 | Tropeano | Flask Web UI (FR11) and Strapi REST client (FR10 sync). `ariadne strapi-sync` command. 132 tests, 92% coverage. |
 
 # Index
 
@@ -257,8 +258,8 @@ The system supports standard reference designators according to IEEE/ANSI conven
 | FR7  | The system shall support recording up to 3 suppliers per component with their respective catalog numbers, to facilitate MDF retrieval                                                                   | O        |
 | FR8  | The system shall store device/PCB metadata: brand, model name, manufacturer, year of production. Devices are automatically created or retrieved during BOM import via CLI flags (--brand, --model, --manufacturer, --year), or linked to existing devices by model name | M        |
 | FR9  | The system shall allow queries for: **which** materials, **how many** (mass), and **where** (component/designator) they are located in a device                                                         | M        |
-| FR10 | The system shall support an **optional intermediate Excel export** for manual verification of AI-extracted MDF data before loading into the SQL DB. The current implementation parses BOM files from Excel (openpyxl) and from text-based PDFs via a direct regex parser (pdf_parser), with DeepSeek AI as a paid fallback only when the direct parser finds nothing (disabled by default via DEEPSEEK_ENABLED). Results are written to SQLite (local) and optionally synced to Strapi API (Note: OCR for scanned PDFs and advanced MDF parsing are planned for future phases) | D        |
-| FR11 | The system shall be a web application accessible via browser                                                                                                                                           | M        |
+| FR10 | The system shall support an **optional intermediate Excel export** for manual verification of AI-extracted MDF data before loading into the SQL DB. The current implementation parses BOM files from Excel (openpyxl), OpenDocument (ods_parser), CSV (csv_parser) and from text-based PDFs via a direct regex parser (pdf_parser), with DeepSeek AI as a paid fallback only when the direct parser finds nothing (disabled by default via DEEPSEEK_ENABLED). Results are written to SQLite (local) and synchronizable to Strapi API via the `ariadne strapi-sync` command (REST client implemented; Strapi server to be provisioned) | D        |
+| FR11 | The system shall be a web application accessible via browser — **implemented**: Flask Web UI (BOM import, component detail with EEC, Excel export, stats) via `python -m ariadne.web` | M        |
 | FR12 | The system shall integrate with the Ariadne data platform for data exchange and future expansion to C2/C3                                                                                             | M        |
 | FR13 | The system shall allow manual entry of component data for products without a digital BOM                                                                                                               | D        |
 | FR14 | The system shall support the use of average/estimated material composition data for components where the original MDF is not available, based on data from similar known components. This will enable predictive algorithms (future development) for estimating composition of components without direct MDF sourcing | D |

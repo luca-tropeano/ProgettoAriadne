@@ -1,6 +1,6 @@
 # Ariadne — BOM Processing Pipeline
 
-**Ariadne Data-Driven Materials Recovery System** — importa, classifica ed esporta Bill of Materials da Excel, CSV e PDF.
+**Ariadne Data-Driven Materials Recovery System** — importa, classifica ed esporta Bill of Materials da Excel, CSV e PDF. Include interfaccia web e sincronizzazione verso Strapi.
 
 ## Installazione
 
@@ -26,6 +26,12 @@ ariadne process "BOM.pdf" --brand "Raspberry Pi" --model "CM5 IO Board"
 
 # Mostra statistiche database
 ariadne stats
+
+# Avvia l'interfaccia web (http://127.0.0.1:5000)
+python -m ariadne.web
+
+# Sincronizza i device verso Strapi (richiede STRAPI_API_TOKEN)
+ariadne strapi-sync
 ```
 
 ## Formati supportati
@@ -42,13 +48,15 @@ ariadne stats
 ## Funzionalità
 
 - **Import BOM** da Excel (`.xlsx`), OpenDocument (`.ods`), CSV (KiCad/EasyEDA) e PDF testuali
+- **Web UI** — import da browser, visualizzazione componenti con EEC, esportazione Excel, statistiche
+- **Sincronizzazione Strapi** — client REST per caricare Device e BOMEntry verso Strapi (PostgreSQL)
 - **Classificazione EEC automatica** — 16 categorie assegnate dai reference designator
 - **Controllo duplicati** — skip con warning se la BOM è già stata importata
 - **Esportazione Excel** — export del database in `.xlsx` con header formattati
 - **Archivio dati grezzi in MongoDB** — ogni file processato viene salvato (contenuto + hash + metadata) prima dell'elaborazione
 - **DeepSeek AI fallback** — per PDF non parsabili dal parser diretto (opzionale, a pagamento)
 - **Database SQLite locale** — nessun server richiesto per l'uso base
-- **54 test pytest** — copertura completa dei parser e della pipeline
+- **130 test pytest** — copertura completa dei parser, pipeline, web UI e client Strapi
 
 ## Configurazione
 
@@ -70,6 +78,8 @@ Variabili d'ambiente principali:
 | `MONGO_URI` | `mongodb://localhost:27017` | MongoDB (dati grezzi, opzionale) |
 | `MONGO_DATABASE` | `ariadne_raw` | Database MongoDB |
 | `MONGO_COLLECTION` | `bom_files` | Collection raw documents |
+| `STRAPI_BASE_URL` | `http://localhost:1337` | URL istanza Strapi |
+| `STRAPI_API_TOKEN` | — | Token API Strapi (per `strapi-sync`) |
 
 ## Struttura del progetto
 
@@ -77,6 +87,8 @@ Variabili d'ambiente principali:
 ariadne-py/
 ├── ariadne/
 │   ├── main.py              # CLI entry point (click)
+│   ├── web.py               # Web UI (Flask)
+│   ├── templates/           # Template HTML della Web UI
 │   ├── config.py            # Configurazione da .env
 │   ├── models.py            # Modelli Pydantic (BOMEntry, Device, Material)
 │   ├── database.py          # Wrapper SQLite
@@ -90,6 +102,7 @@ ariadne-py/
 │   ├── eec.py               # Classificazione EEC 16 categorie
 │   ├── export.py            # Export database → Excel
 │   ├── mongo_store.py       # Archivio dati grezzi MongoDB (opzionale)
+│   ├── strapi_client.py     # Client Strapi REST (Device/BOMEntry sync)
 │   └── sftp_client.py       # Upload SFTP (paramiko)
 └── tests/
     ├── test_models.py
@@ -99,7 +112,9 @@ ariadne-py/
     ├── test_ai_client.py
     ├── test_orchestrator.py
     ├── test_new_features.py
-    └── test_mongo_store.py
+    ├── test_mongo_store.py
+    ├── test_strapi_client.py
+    └── test_web.py
 ```
 
 ## Test
@@ -109,12 +124,14 @@ cd src/main/ariadne-py
 pytest -v
 ```
 
-**115 test** che coprono:
+**130 test** che coprono:
 - Modelli Pydantic (BOMEntry, Device, ImportResult)
 - Parser Excel (rilevamento SMT/THT)
 - Parser OpenDocument (.ods)
 - Parser PDF diretto (designator, quantità, package, manufacturer)
 - Client DeepSeek (parsing JSON, usage/cost tracking)
+- Client Strapi (upsert device, push entries, auth Bearer)
+- Web UI (import, dettaglio device, export Excel, stats)
 - Orchestrator (flussi Excel/CSV/PDF, fallback AI, duplicati)
 - Classificazione EEC (16 categorie)
 - Esportazione Excel

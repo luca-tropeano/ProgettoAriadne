@@ -2,7 +2,7 @@
 
 ##### DIBRIS – Università di Genova. Scuola Politecnica, Corso di Ingegneria del Software 80154
 
-**VERSIONE : 1.7**
+**VERSIONE : 1.8**
 
 **Autori**
 Tropeano Luca
@@ -19,6 +19,7 @@ Tropeano Luca
 | 1.5      | 12/08/2026 | Tropeano | Supporto import CSV (FR9), classificazione EEC automatica (FR7), controllo duplicati BOM, export DB→Excel (FR14), DeepSeek AI come fallback a pagamento. 47 test, 350/350 componenti da 5 BOM reali. |
 | 1.6      | 12/08/2026 | Tropeano | Storage dati grezzi MongoDB (NFR8 data retention): documenti raw archiviati prima dell'elaborazione. Opzionale, degradazione offline. 54 test. |
 | 1.7      | 12/08/2026 | Tropeano | Supporto import OpenDocument (.ods) (FR9): schema dinamico, BOM reale HILTOP Motherboard (160/160). 115 test, 93% coverage. |
+| 1.8      | 12/08/2026 | Tropeano | Web UI Flask (FR11) e client Strapi REST (FR10 sync). Comando `ariadne strapi-sync`. 132 test, 92% coverage. |
 
 # Indice
 
@@ -258,8 +259,8 @@ Il sistema supporta i reference designator standard secondo le convenzioni IEEE/
 | FR7  | Il sistema deve supportare la registrazione di fino a 3 fornitori per componente con i rispettivi numeri di catalogo, per facilitare il reperimento delle MDF                                     | O        |
 | FR8  | Il sistema deve memorizzare i metadati del dispositivo/PCB: marca, nome modello, produttore, anno di produzione. I dispositivi vengono creati automaticamente o recuperati durante l'import BOM tramite flag CLI (--brand, --model, --manufacturer, --year), oppure collegati a dispositivi esistenti per nome modello | M        |
 | FR9  | Il sistema deve permettere interrogazioni per: **quali** materiali, **quanti** (massa) e **dove** (componente/designator) si trovano in un dispositivo                                            | M        |
-| FR10 | Il sistema deve supportare un **export Excel intermedio opzionale** per verifica manuale dei dati MDF estratti dall'AI prima del caricamento nel SQL DB. L'implementazione attuale parsa i file BOM da Excel (openpyxl) e da PDF testuali tramite parser diretto regex (pdf_parser), con DeepSeek AI come fallback a pagamento solo quando il parser diretto non trova nulla (disabilitata di default via DEEPSEEK_ENABLED). I risultati vengono scritti su SQLite (locale) e opzionalmente sincronizzati su Strapi API (Nota: OCR per PDF scannerizzati e parsing MDF avanzato sono pianificati per fasi successive) | D        |
-| FR11 | Il sistema deve essere un'applicazione web accessibile via browser                                                                                                                                | M        |
+| FR10 | Il sistema deve supportare un **export Excel intermedio opzionale** per verifica manuale dei dati MDF estratti dall'AI prima del caricamento nel SQL DB. L'implementazione attuale parsa i file BOM da Excel (openpyxl), OpenDocument (ods_parser), CSV (csv_parser) e da PDF testuali tramite parser diretto regex (pdf_parser), con DeepSeek AI come fallback a pagamento solo quando il parser diretto non trova nulla (disabilitata di default via DEEPSEEK_ENABLED). I risultati vengono scritti su SQLite (locale) e sincronizzabili su Strapi API tramite il comando `ariadne strapi-sync` (client REST implementato; il server Strapi va provisionato) | D        |
+| FR11 | Il sistema deve essere un'applicazione web accessibile via browser — **implementata**: Web UI Flask (import BOM, dettaglio componenti con EEC, export Excel, statistiche) su `python -m ariadne.web` | M        |
 | FR12 | Il sistema deve integrarsi con la piattaforma dati Ariadne per lo scambio dati e la futura espansione a C2/C3                                                                                     | M        |
 | FR13 | Il sistema deve permettere l'inserimento manuale dei dati dei componenti per prodotti senza BOM digitale                                                                                          | D        |
 | FR14 | Il sistema deve permettere l'utilizzo di dati di composizione medi/stimati per componenti di cui non si dispone della MDF originale, basati sui dati di componenti simili noti. Questo abiliterà futuri algoritmi predittivi per la stima della composizione di componenti senza MDF diretta | D |

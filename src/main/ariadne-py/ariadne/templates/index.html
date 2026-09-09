@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="utf-8">
+    <title>Ariadne — BOM Processing</title>
+    <style>
+        body { font-family: sans-serif; margin: 2rem; }
+        nav a { margin-right: 1rem; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+        th { background: #f0f0f0; }
+        .ok { color: green; }
+        .err { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Ariadne — Sistema Recupero Materiali</h1>
+    <nav>
+        <a href="{{ url_for('index') }}">Home</a>
+        <a href="{{ url_for('import_bom') }}">Import BOM</a>
+    </nav>
+    <p>
+        <strong>Statistiche:</strong>
+        {{ nav_stats.devices }} dispositivi · {{ nav_stats.bom_entries }} componenti
+        · {{ nav_stats.materials }} materiali
+    </p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <p class="{{ category }}">{{ message }}</p>
+        {% endfor %}
+    {% endwith %}
+
+    <h2>Dispositivi importati</h2>
+    {% if devices %}
+        <table>
+            <tr>
+                <th>Modello</th>
+                <th>Brand</th>
+                <th>Produttore</th>
+                <th>Anno</th>
+                <th>Componenti</th>
+                <th></th>
+            </tr>
+            {% for d in devices %}
+            <tr>
+                <td>{{ d.model_name }}</td>
+                <td>{{ d.brand }}</td>
+                <td>{{ d.manufacturer }}</td>
+                <td>{{ d.year_of_production or '' }}</td>
+                <td><a href="{{ url_for('device_detail', device_id=d.id) }}">Dettaglio</a></td>
+                <td><a href="{{ url_for('export_device', device_id=d.id) }}">Esporta</a></td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>Nessun dispositivo importato. <a href="{{ url_for('import_bom') }}">Importa un BOM</a>.</p>
+    {% endif %}
+</body>
+</html>

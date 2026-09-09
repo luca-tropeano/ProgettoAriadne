@@ -57,3 +57,47 @@ def test_process_pdf_with_no_text(monkeypatch, tmp_path):
     monkeypatch.setenv("MONGO_URI", "mongodb://127.0.0.1:1")
     result = _runner().invoke(cli, ["process", str(pdf), "--brand", "T", "--model", "M"])
     assert result.exit_code == 1
+
+
+def test_strapi_sync_requires_token(monkeypatch, tmp_path):
+    monkeypatch.delenv("STRAPI_API_TOKEN", raising=False)
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'e.db'}")
+    monkeypatch.setenv("MONGO_URI", "mongodb://127.0.0.1:1")
+    result = _runner().invoke(cli, ["strapi-sync"])
+    assert result.exit_code == 1
+    assert "STRAPI_API_TOKEN" in result.output
+
+
+def test_strapi_sync_pushes_devices(monkeypatch, tmp_path):
+    import ariadne.strapi_client as sc
+
+    monkeypatch.setenv("STRAPI_API_TOKEN", "fake-token")
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'f.db'}")
+    monkeypatch.setenv("MONGO_URI", "mongodb://127.0.0.1:1")
+
+    # seed device
+    from ariadne.config import AppConfig
+    from ariadne.database import Database
+    from ariadne.models import BOMEntry, Device
+
+    cfg = AppConfig.from_env()
+    db = Database(cfg.database)
+    did = db.find_or_create_device(Device(brand="B", model_name="SYNC-MODEL", manufacturer="M"))
+    db.insert_bom_entry(did, BOMEntry(item_number=1, quantity=1, reference_designator="R1",
+                                      mounting_type="SMT"))
+    db.close()
+
+    def _fake_init(self, *a, **k):
+        pass
+
+    monkeypatch.setattr(sc.StrapiClient, "__init__", _fake_init)
+    monkeypatch.setattr(
+        sc.StrapiClient,
+        "sync_device",
+        lambda self, device, entries: {"device_id": 1, "entries_pushed": len(entries)},
+    )
+    monkeypatch.setattr(sc.StrapiClient, "close", lambda self: None)
+
+    result = _runner().invoke(cli, ["strapi-sync"])
+    assert result.exit_code == 0
+    assert "SYNC-MODEL" in result.output

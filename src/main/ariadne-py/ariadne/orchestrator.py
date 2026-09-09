@@ -21,6 +21,7 @@ class Orchestrator:
         self._db = Database(config.database)
         self._ai = DeepSeekClient(config.deepseek)
         self._raw = RawDataStore(config.mongo)
+        self.latest_device_id: int | None = None
 
     def process_file(self, file_path: str, device: Device) -> ImportResult:
         path = Path(file_path)
@@ -154,6 +155,7 @@ class Orchestrator:
             result = ImportResult()
         result.total_rows = len(entries)
         device_id = self._db.find_or_create_device(device)
+        self.latest_device_id = device_id
 
         for entry in entries:
             try:
@@ -180,6 +182,12 @@ class Orchestrator:
         stats["raw_documents"] = self._raw.count()
         stats["raw_available"] = self._raw.available
         return stats
+
+    def get_all_devices(self) -> list[dict]:
+        return self._db.get_all_devices()
+
+    def get_bom_entries(self, device_id: int) -> list[dict]:
+        return self._db.get_bom_entries(device_id)
 
     def close(self):
         self._ai.close()

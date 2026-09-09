@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="utf-8">
+    <title>Ariadne — {{ device.model_name }}</title>
+    <style>
+        body { font-family: sans-serif; margin: 2rem; }
+        nav a { margin-right: 1rem; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+        th { background: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="{{ url_for('index') }}">Home</a>
+        <a href="{{ url_for('import_bom') }}">Import BOM</a>
+        <a href="{{ url_for('export_device', device_id=device.id) }}">Esporta Excel</a>
+    </nav>
+    <h1>{{ device.brand }} {{ device.model_name }}</h1>
+    <p><strong>Produttore:</strong> {{ device.manufacturer }} · <strong>Anno:</strong> {{ device.year_of_production or '—' }}</p>
+    <p><strong>Componenti:</strong> {{ entries|length }}</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <p class="{{ category }}">{{ message }}</p>
+        {% endfor %}
+    {% endwith %}
+
+    <table>
+        <tr>
+            <th>#</th>
+            <th>Ref. Des.</th>
+            <th>Qty</th>
+            <th>Valore</th>
+            <th>Package</th>
+            <th>Produttore</th>
+            <th>Codice</th>
+            <th>Montaggio</th>
+            <th>EEC</th>
+        </tr>
+        {% for e in entries %}
+        <tr>
+            <td>{{ e.item_number }}</td>
+            <td>{{ e.reference_designator }}</td>
+            <td>{{ e.quantity }}</td>
+            <td>{{ e.part_value }}</td>
+            <td>{{ e.package }}</td>
+            <td>{{ e.manufacturer }}</td>
+            <td>{{ e.manufacturer_order_code }}</td>
+            <td>{{ e.mounting_type }}</td>
+            <td>{{ e._eec_name }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

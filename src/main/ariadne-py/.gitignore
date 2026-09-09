@@ -7,3 +7,4 @@ ariadne.db
 .coverage
 htmlcov/
 .pytest_cache/
+uploads/

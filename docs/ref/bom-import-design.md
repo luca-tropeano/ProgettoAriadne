@@ -31,6 +31,8 @@ ariadne-py/
 ├── ariadne/
 │   ├── __init__.py
 │   ├── main.py                     # CLI entry point (click)
+│   ├── web.py                      # Web UI (Flask): import, dettaglio device, export, stats
+│   ├── templates/                  # Template HTML della Web UI
 │   ├── config.py                   # AppConfig, DeepSeekConfig, StrapiConfig, SFTPConfig, DatabaseConfig
 │   ├── models.py                   # BOMEntry, Device, Material, ComponentMaterial, ImportResult (pydantic)
 │   ├── database.py                 # Wrapper SQLite
@@ -39,12 +41,12 @@ ariadne-py/
 │   ├── csv_parser.py               # Parsing CSV (KiCad/EasyEDA, auto-detect)
 │   ├── pdf_extractor.py            # Estrazione testo PDF (pdfplumber)
 │   ├── pdf_parser.py               # Parser diretto BOM da testo (regex, senza AI)
-│   ├── csv_parser.py               # Parsing CSV (KiCad/EasyEDA, auto-detect)
 │   ├── ai_client.py                # Client DeepSeek (OpenAI-compatibile, fallback)
 │   ├── orchestrator.py             # Orchestrator — coordinamento processi
 │   ├── eec.py                      # Classificazione EEC 16 categorie
 │   ├── export.py                   # Export database → Excel
 │   ├── mongo_store.py              # Archivio dati grezzi MongoDB (opzionale)
+│   ├── strapi_client.py            # Client Strapi REST (Device/BOMEntry sync)
 │   └── sftp_client.py              # Upload SFTP (paramiko)
 └── tests/
     ├── __init__.py
@@ -54,6 +56,8 @@ ariadne-py/
     ├── test_orchestrator.py         # pytest — flussi Excel/PDF, AI fallback
     ├── test_new_features.py         # pytest — duplicati, EEC, export
     ├── test_mongo_store.py          # pytest — archivio raw MongoDB (online/offline)
+    ├── test_strapi_client.py        # pytest — client Strapi (upsert, push, auth)
+    ├── test_web.py                  # pytest — Web UI (import, dettaglio, export, stats)
     └── test_models.py               # pytest — modelli pydantic
 ```
 
@@ -323,6 +327,31 @@ File: `ariadne/database.py`
 - `insert_bom_entry(device_id, entry)` → entry_id (None se duplicato: stessa device_id + reference_designator)
 - `get_bom_entries(device_id)` → list of rows (per export/verifica)
 - `get_stats()` → dict (device, bom_entry, material counts)
+
+## strapi_client.py — Client Strapi REST
+
+File: `ariadne/strapi_client.py`
+
+- Client HTTP per l'headless CMS **Strapi** (REST `/api/...`), usa `httpx`
+- Autenticazione **Bearer token** (`Authorization: Bearer <token>`)
+- `upsert_device(device)` → cerca per `modelName`, **crea** (POST) o **aggiorna** (PUT); ritorna l'id Strapi
+- `push_bom_entry(device, entry, device_strapi_id)` → crea un BOMEntry collegato al device (relazione)
+- `sync_device(device, entries)` → upsert device + push di tutte le BOMEntry; ritorna `{device_id, entries_pushed}`
+- Campi Strapi in camelCase (`yearOfProduction`, `referenceDesignator`, `eecCategoryId`, ...)
+- **Nota**: Strapi usa PostgreSQL (prod) / SQLite (dev); MongoDB resta solo per i dati grezzi
+
+## web.py — Web UI (Flask)
+
+File: `ariadne/web.py`, template in `ariadne/templates/`
+
+- `create_app(config)` → app Flask che condivide lo stesso DB SQLite della CLI
+- Rotta `/` — elenco dispositivi con statistiche
+- Rotta `/import` — upload BOM (xlsx/xls/ods/csv/pdf) + campi device; redirect al dettaglio del device
+- Rotta `/device/<id>` — dettaglio device con componenti e categoria EEC
+- Rotta `/device/<id>/export` — download Excel del device
+- Rotta `/api/stats` — statistiche in JSON
+- Avvio: `python -m ariadne.web` → http://127.0.0.1:5000
+- Nessuna dipendenza da Strapi: la UI lavora sui dati locali; la sincronizzazione è separata
 
 ## Modelli Dati (Pydantic)
 

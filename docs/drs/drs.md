@@ -6,7 +6,7 @@ DIBRIS – University of Genoa. Polytechnic School, Software Engineering Course 
 
 <div align='right'> <b> Authors </b> <br> Tropeano Luca </div>
 
-**VERSION : 1.9**
+**VERSION : 2.0**
 
 ### REVISION HISTORY
 
@@ -22,6 +22,7 @@ DIBRIS – University of Genoa. Polytechnic School, Software Engineering Course 
 | 1.7      | 12/08/2026 | Tropeano  | CSV parser (KiCad/EasyEDA, auto-detect delimitatore), classificazione EEC automatica (16 categorie), controllo duplicati BOM (skip con warning), esportazione DB → Excel. 47 test pytest, 350/350 componenti importati da 5 BOM reali. |
 | 1.8      | 12/08/2026 | Tropeano  | MongoDB raw-data storage (bom_files: content + sha256 hash + metadata). Opzionale, graceful degradation offline. 54 test pytest. |
 | 1.9      | 12/08/2026 | Tropeano  | Parser OpenDocument (.ods) con schema dinamico. Import BOM reale Devtank HILTOP Motherboard (160/160). 115 test pytest, 93% coverage, 510/510 componenti da 6 BOM reali. |
+| 2.0      | 12/08/2026 | Tropeano  | Flask Web UI (import, device detail, Excel export, stats) and Strapi REST client (device upsert, bom_entry push, Bearer auth). New CLI `ariadne strapi-sync` command. 132 pytest tests, 92% coverage. |
 
 ## Table of Contents
 
