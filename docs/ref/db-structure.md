@@ -1,10 +1,22 @@
 # Struttura del Database — Sistema Ariadne di Recupero Materiali (Fase 1)
 
-**VERSIONE : 1.8** | **Data:** 12/08/2026 | **Autore:** Tropeano Luca
+**VERSIONE : 1.9** | **Data:** 12/08/2026 | **Autore:** Tropeano Luca
+
+## Ruoli dei database
+
+Il sistema usa **tre archivi con ruoli distinti**:
+
+| Archivio | Tecnologia | Ruolo | Stato |
+|----------|-----------|-------|-------|
+| **SQLite** | file locale | Storage locale della pipeline Python (BOM import, duplicati, EEC) | Attivo |
+| **Strapi + PostgreSQL** | headless CMS + SQL | Database persistente per l'org (REST API, CRUD automatiche) | Da collegare |
+| **MongoDB** | document store | **Archivio dati grezzi** (raw documents: i file sorgente prima dell'elaborazione) | Attivo (opzionale) |
+
+**MongoDB NON sostituisce Strapi:** serve solo come archivio dei documenti sorgente (qualsiasi formato), mentre PostgreSQL (via Strapi) ospita i dati strutturati/elaborati. Strapi v4/v5 non supporta MongoDB come database sottostante — usa SQLite (dev) o PostgreSQL (produzione).
 
 ## Piattaforma
 
-Database gestito tramite **Strapi** (headless CMS) oppure **SQLite locale** (Python pipeline). L'accesso avviene tramite **API REST** di Strapi (quando configurato) o direttamente via SQLite (modalità locale).
+Database gestito tramite **Strapi** (headless CMS) oppure **SQLite locale** (Python pipeline). L'accesso avviene tramite **API REST** di Strapi (quando configurato) o direttamente via SQLite (modalità locale). Il database sottostante a Strapi è **PostgreSQL** in produzione (SQLite in sviluppo).
 
 **MongoDB** è usato come archivio dei **dati grezzi** (raw documents): ogni file BOM processato viene salvato in una collection `bom_files` (contenuto, sha256 hash, metadata del dispositivo) prima dell'elaborazione. Lo storage è **opzionale** — se Mongo è offline, la pipeline continua senza errori.
 

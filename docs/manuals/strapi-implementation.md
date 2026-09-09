@@ -1,6 +1,6 @@
 # Guida Implementazione Strapi — Sistema Ariadne (Fase 1)
 
-**VERSIONE: 1.4** | **Data:** 22/07/2026 | **Autore:** Tropeano Luca
+**VERSIONE: 1.5** | **Data:** 12/08/2026 | **Autore:** Tropeano Luca
 
 ## Prerequisiti
 
@@ -15,6 +15,8 @@ npx create-strapi-app@latest ariadne-strapi --quickstart
 # oppure con PostgreSQL:
 npx create-strapi-app@latest ariadne-strapi --dbclient=postgres --dbhost=localhost --dbport=5432 --dbname=ariadne --dbuser=postgres --dbpassword=...
 ```
+
+> **Nota su MongoDB:** Strapi v4/v5 **non supporta MongoDB** come database sottostante (usa SQLite in sviluppo, PostgreSQL in produzione). Nel progetto, **MongoDB ha un ruolo separato**: funge da archivio dei dati grezzi (`bom_files`) della pipeline Python, mentre PostgreSQL (via Strapi) ospita i dati strutturati. Non c'è conflitto tra i due.
 
 ## Creazione Collection Types
 
