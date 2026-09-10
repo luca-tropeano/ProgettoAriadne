@@ -131,6 +131,15 @@ class MDFIngestor:
         """Popola material + component_material da un file JSON (formato sopra)."""
         path = Path(file_path)
         data = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+        return self.ingest_from_dict(data)
+
+    def ingest_from_dict(self, data: dict) -> MDFIngestResult:
+        """Popola material + component_material da un dict JSON (formato sopra).
+
+        Variante in-memory di :meth:`ingest_from_json`: stessa logica senza
+        passare da un file — usata dal sourcing MDF automatico
+        (``ariadne.mdf_auto``).
+        """
         result = MDFIngestResult()
 
         device_id = None

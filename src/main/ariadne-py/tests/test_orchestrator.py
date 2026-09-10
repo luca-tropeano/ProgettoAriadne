@@ -113,6 +113,42 @@ def test_process_excel_end_to_end(monkeypatch, tmp_path):
     assert result.failed_rows == 0
 
 
+def test_process_md_end_to_end(tmp_path):
+    p = tmp_path / "bom.md"
+    p.write_text(
+        "| Ref | Value | Qty |\n"
+        "|---|---|---|\n"
+        "| R1 | 10k | 2 |\n"
+        "| C1 | 100nF | 1 |\n",
+        encoding="utf-8",
+    )
+    orch = Orchestrator(
+        AppConfig(database=DatabaseConfig(url="sqlite:///:memory:"))
+    )
+    try:
+        result = orch.process_file(str(p), DEVICE)
+    finally:
+        orch.close()
+    assert result.success is True
+    assert result.total_rows == 2
+    assert result.imported_rows == 2
+    assert result.failed_rows == 0
+
+
+def test_process_md_invalid_fails(tmp_path):
+    p = tmp_path / "empty.md"
+    p.write_text("# no table here\n", encoding="utf-8")
+    orch = Orchestrator(
+        AppConfig(database=DatabaseConfig(url="sqlite:///:memory:"))
+    )
+    try:
+        result = orch.process_file(str(p), DEVICE)
+    finally:
+        orch.close()
+    assert result.success is False
+    assert any("Markdown" in e for e in result.errors)
+
+
 def test_unsupported_format_fails(monkeypatch):
     orch = Orchestrator(AppConfig(database=DatabaseConfig(url="sqlite:///:memory:")))
     try:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import io
+import re
 from pathlib import Path
 
 from ariadne.models import BOMEntry
@@ -46,7 +47,81 @@ def _split_designators(text: str) -> str:
         parts = [p.strip() for p in text.split(",") if p.strip()]
     else:
         parts = [p.strip() for p in text.split() if p.strip()]
-    return ",".join(parts) if parts else text
+    expanded = []
+    for p in parts:
+        expanded.extend(_expand_range(p))
+    return ",".join(expanded) if expanded else text
+
+
+_RANGE_RE = re.compile(
+    r"^([A-Za-z]+)(\d+)\s*[-\u2013\u2014\u2010]\s*([A-Za-z]+)(\d+)([A-Za-z]*)$"
+)
+
+
+def _expand_range(token: str) -> list[str]:
+    """Espande un reference range tipo ``C1-C10`` in ``C1,...,C10``.
+
+    Richiede lo stesso prefisso alfanumerico sui due estremi (``C1-C10``),
+    senza padding: ``C1-C10`` -> C1..C10. Costruzioni tipo ``USB-2`` o
+    ``TP-5V`` non matchano (serve una cifra subito dopo il prefisso iniziale).
+    """
+    m = _RANGE_RE.match(token)
+    if not m:
+        return [token]
+    prefix, start_s, prefix2, end_s, suffix = m.groups()
+    if prefix.upper() != prefix2.upper():
+        return [token]
+    try:
+        start, end = int(start_s), int(end_s)
+    except ValueError:
+        return [token]
+    if start <= 0 or end < start:
+        return [token]
+    return [f"{prefix}{i}{suffix}" for i in range(start, end + 1)]
+
+
+_KNOWN = {
+    "ref": "ref", "reference": "ref", "designator": "ref",
+    "qty": "qty", "quantity": "qty",
+    "value": "value", "designation": "value", "part/value": "value", "part": "value",
+    "footprint": "package", "package": "package", "foot print": "package",
+    "mouserpn": "mouser", "mouser_pn": "mouser", "supplier order code": "mouser",
+    "supplier": "supplier", "supplier and ref": "supplier",
+    "donotpopulate": "dnp", "do not populate": "dnp", "dnp": "dnp",
+    "gender": "gender",
+    "datasheet": "datasheet",
+}
+
+
+def _map_columns(headers: list[str], known: dict = _KNOWN) -> dict:
+    """Mappa gli header di una tabella (CSV o Markdown) su chiavi semantiche.
+
+    Prima match esatto, poi substring (first-wins), come nel parser CSV.
+    Ritorna ``{"ref": 0, "qty": 1, ...}`` con gli indici delle colonne.
+    """
+    col: dict = {}
+    for i, h in enumerate(headers):
+        clean = h.strip().strip('"').lower()
+        mapped = known.get(clean)
+        if mapped is None:
+            for key, value in known.items():
+                if key in clean:
+                    mapped = value
+                    break
+        if mapped and mapped not in col:
+            col[mapped] = i
+    return col
+
+
+def _cell(col: dict, key: str, row_vals: list[str]) -> str | None:
+    """Valore pulito di ``key`` dalla riga, o None se assente/vuoto."""
+    idx = col.get(key)
+    if idx is None or idx >= len(row_vals):
+        return None
+    value = row_vals[idx].strip().strip('"')
+    if value.lower() in ("", "~"):
+        return None
+    return value
 
 
 def parse_csv_bom(file_path: str) -> list[BOMEntry]:
@@ -60,28 +135,7 @@ def parse_csv_bom(file_path: str) -> list[BOMEntry]:
 
     headers = [h.strip().strip('"').lower() for h in reader.fieldnames]
 
-    col = {}
-    known = {
-        "ref": "ref", "reference": "ref", "designator": "ref",
-        "qty": "qty", "quantity": "qty",
-        "value": "value", "designation": "value", "part/value": "value", "part": "value",
-        "footprint": "package", "package": "package", "foot print": "package",
-        "mouserpn": "mouser", "mouser_pn": "mouser", "supplier order code": "mouser",
-        "supplier": "supplier", "supplier and ref": "supplier",
-        "donotpopulate": "dnp", "do not populate": "dnp", "dnp": "dnp",
-        "gender": "gender",
-        "datasheet": "datasheet",
-    }
-    for i, h in enumerate(headers):
-        clean = h.strip().strip('"').lower()
-        mapped = known.get(clean)
-        if mapped is None:
-            for key, m in known.items():
-                if key in clean:
-                    mapped = m
-                    break
-        if mapped and mapped not in col:
-            col[mapped] = i
+    col = _map_columns(headers)
 
     ref_key = next((k for k in ("ref", "reference", "designator") if k in col), None)
     qty_key = next((k for k in ("qty", "quantity") if k in col), None)

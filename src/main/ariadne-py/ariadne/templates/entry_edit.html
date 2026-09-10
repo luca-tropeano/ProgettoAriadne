@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="utf-8">
+    <title>Ariadne — Modifica componente</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="header-inner">
+            <h1>Ariadne<small>Modifica componente</small></h1>
+            <nav>
+                <a href="{{ url_for('index') }}">Home</a>
+                <a href="{{ url_for('import_bom') }}">Import BOM</a>
+                <a href="{{ url_for('materials') }}">Materiali</a>
+                <a href="{{ url_for('device_detail', device_id=device.id) }}">← Torna a {{ device.model_name }}</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="wrap">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash {{ 'ok' if category == 'success' else 'err' }}">
+                        {{ message }}
+                        <button type="button" onclick="this.parentElement.remove()" title="Chiudi">&times;</button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="card form-card">
+            <h2>Componente #{{ entry.item_number }}
+                <small class="text-muted">{{ entry.reference_designator }}</small></h2>
+            <form method="post" class="form-grid">
+                <label>Item #<span class="req">*</span>
+                    <input type="number" name="item_number" required value="{{ entry.item_number }}">
+                </label>
+                <label>Quantità<span class="req">*</span>
+                    <input type="number" name="quantity" required value="{{ entry.quantity }}">
+                </label>
+                <label>Ref. Des.<span class="req">*</span>
+                    <input type="text" name="reference_designator" required
+                           value="{{ entry.reference_designator }}">
+                </label>
+                <label>Valore
+                    <input type="text" name="part_value" value="{{ entry.part_value or '' }}">
+                </label>
+                <label>Package
+                    <input type="text" name="package" value="{{ entry.package or '' }}">
+                </label>
+                <label>Produttore
+                    <input type="text" name="manufacturer" value="{{ entry.manufacturer or '' }}">
+                </label>
+                <label>Codice produttore (MPN)
+                    <input type="text" name="manufacturer_order_code" value="{{ entry.manufacturer_order_code or '' }}">
+                </label>
+                <label>Fornitore
+                    <input type="text" name="supplier" value="{{ entry.supplier or '' }}">
+                </label>
+                <label>Codice fornitore
+                    <input type="text" name="supplier_order_code" value="{{ entry.supplier_order_code or '' }}">
+                </label>
+                <label>Montaggio
+                    <select name="mounting_type">
+                        {% for opt in ['THT', 'SMT', 'SMD'] %}
+                            <option value="{{ opt }}" {{ 'selected' if (entry.mounting_type or 'SMT') == opt else '' }}>{{ opt }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="span-2">Note
+                    <textarea name="notes" rows="3">{{ entry.notes or '' }}</textarea>
+                </label>
+                <div class="span-2 actions">
+                    <button type="submit" class="btn">Salva</button>
+                    <a class="btn ghost" href="{{ url_for('device_detail', device_id=device.id) }}">Annulla</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

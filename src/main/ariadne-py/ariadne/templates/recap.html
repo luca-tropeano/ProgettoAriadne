@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="utf-8">
+    <title>Ariadne — Recap import {{ recap.model_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="header-inner">
+            <h1>Ariadne<small>Recap differenze</small></h1>
+            <nav>
+                <a href="{{ url_for('index') }}">Home</a>
+                <a href="{{ url_for('import_bom') }}">Import BOM</a>
+                <a href="{{ url_for('materials') }}">Materiali</a>
+                <a href="{{ url_for('device_detail', device_id=device.id) }}">← Vai a {{ device.model_name }}</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="wrap">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash {{ 'ok' if category == 'success' else 'err' }}">
+                        {{ message }}
+                        <button type="button" onclick="this.parentElement.remove()" title="Chiudi">&times;</button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="card">
+            <h2>Import su {{ device.brand }} {{ device.model_name }}</h2>
+            <p class="sub">
+                Il prodotto esisteva già; {{ recap.imported_rows }}
+                componenti erano stati importati. Diverse da quella già presente:
+                le modifiche sono state applicate.
+            </p>
+        </div>
+
+        {% set counts %}
+            {{ recap.added|length }} aggiunti,
+            {{ recap.removed|length }} rimossi,
+            {{ recap.modified|length }} modificati
+        {% endset %}
+
+        {% if recap.added or recap.removed or recap.modified %}
+            <div class="recap-counters">
+                <span class="pill ok">{{ recap.added|length }} aggiunti</span>
+                <span class="pill err">{{ recap.removed|length }} rimossi</span>
+                <span class="pill warn">{{ recap.modified|length }} modificati</span>
+            </div>
+
+            {% if recap.added %}
+                <h3>Aggiunti<small class="count">{{ recap.added|length }}</small></h3>
+                <div class="tbl-wrap">
+                    <table>
+                        <thead><tr><th>Ref. Des.</th></tr></thead>
+                        <tbody>
+                            {% for ref in recap.added %}
+                                <tr><td class="mono">{{ ref }}</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+
+            {% if recap.removed %}
+                <h3>Rimossi<small class="count">{{ recap.removed|length }}</small></h3>
+                <div class="tbl-wrap">
+                    <table>
+                        <thead><tr><th>Ref. Des.</th></tr></thead>
+                        <tbody>
+                            {% for ref in recap.removed %}
+                                <tr><td class="mono">{{ ref }}</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+
+            {% if recap.modified %}
+                <h3>Modificati<small class="count">{{ recap.modified|length }}</small></h3>
+                <div class="tbl-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Ref. Des.</th>
+                                <th>Campo</th>
+                                <th>Prima</th>
+                                <th>Ora</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m in recap.modified %}
+                                {% set keys = [] %}
+                                {% for k in m.new if m.new[k] if k != 'ref' %}
+                                    {% if (m.old[k] or '') != (m.new[k] or '') %}
+                                        <tr>
+                                            <td class="mono">{{ m.ref }}</td>
+                                            <td>{{ k }}</td>
+                                            <td class="del">{{ m.old[k] or '—' }}</td>
+                                            <td class="add">{{ m.new[k] or '—' }}</td>
+                                        </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        {% else %}
+            <p class="sub">Le BOM erano identiche: nessuna differenza.</p>
+        {% endif %}

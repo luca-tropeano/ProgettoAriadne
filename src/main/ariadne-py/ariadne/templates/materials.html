@@ -3,81 +3,150 @@
 <head>
     <meta charset="utf-8">
     <title>Ariadne — Materiali</title>
-    <style>
-        body { font-family: sans-serif; margin: 2rem; }
-        nav a { margin-right: 1rem; }
-        table { border-collapse: collapse; width: 100%; }
-        th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
-        th { background: #f0f0f0; }
-        .ok { color: green; }
-        .err { color: red; }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <nav>
-        <a href="{{ url_for('index') }}">Home</a>
-        <a href="{{ url_for('import_bom') }}">Import BOM</a>
-        <a href="{{ url_for('mdf_import') }}">Import MDF</a>
-        <a href="{{ url_for('materials') }}">Materiali</a>
-    </nav>
-    <h1>Materiali MDF</h1>
+    <header>
+        <div class="header-inner">
+            <h1>Ariadne<small>Materiali &amp; collegamenti</small></h1>
+            <nav>
+                <a href="{{ url_for('index') }}">Home</a>
+                <a href="{{ url_for('import_bom') }}">Import BOM</a>
+                <a href="{{ url_for('materials') }}" class="active">Materiali</a>
+            </nav>
+        </div>
+    </header>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% for category, message in messages %}
-            <p class="{{ category }}">{{ message }}</p>
-        {% endfor %}
-    {% endwith %}
+    <div class="wrap">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash {{ 'ok' if category == 'success' else 'err' }}">
+                        {{ message }}
+                        <button type="button" onclick="this.parentElement.remove()" title="Chiudi">&times;</button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
-    <h2>Materiali dichiarati</h2>
-    {% if materials %}
-        <table>
-            <tr>
-                <th>Materiale</th>
-                <th>CAS RN</th>
-                <th>Categoria</th>
-                <th>Componenti collegati</th>
-            </tr>
-            {% for m in materials %}
-            <tr>
-                <td>{{ m.material_name }}</td>
-                <td>{{ m.casrn or '—' }}</td>
-                <td>{{ m.category }}</td>
-                <td>{{ m.linked_entries }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-    {% else %}
-        <p>Nessun materiale. <a href="{{ url_for('mdf_import') }}">Importa un MDF</a>.</p>
-    {% endif %}
+        <div class="search-box">
+            <input type="search" id="mat-search" autocomplete="off"
+                   placeholder="Cerca materiale, CAS, componente, device, MPN…"
+                   oninput="filterTables()">
+            <span class="count" id="match-count"></span>
+        </div>
 
-    <h2>Collegamenti componente → materiale</h2>
-    {% if links %}
-        <table>
-            <tr>
-                <th>Device</th>
-                <th>Ref. Des.</th>
-                <th>Value</th>
-                <th>Materiale</th>
-                <th>CAS RN</th>
-                <th>Massa (mg)</th>
-                <th>Fonte MDF</th>
-                <th>Note</th>
-            </tr>
-            {% for l in links %}
-            <tr>
-                <td>{{ l.brand }} {{ l.model_name }}</td>
-                <td>{{ l.reference_designator }}</td>
-                <td>{{ l.part_value }}</td>
-                <td>{{ l.material_name }}</td>
-                <td>{{ l.casrn or '—' }}</td>
-                <td>{{ l.mass_mg }}</td>
-                <td>{{ l.source_mdf or '—' }}</td>
-                <td>{{ l.note or '—' }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-    {% else %}
-        <p>Nessun link materiale↔componente.</p>
-    {% endif %}
+        <h2>Materiali dichiarati</h2>
+        {% if materials %}
+            <div class="tbl-wrap">
+                <table id="mat-table">
+                    <thead>
+                        <tr>
+                            <th>Materiale</th>
+                            <th>CAS RN</th>
+                            <th>Categoria</th>
+                            <th>Componenti collegati</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in materials %}
+                        <tr>
+                            <td>{{ m.material_name }}</td>
+                            <td>{{ m.casrn or '—' }}</td>
+                            <td>{{ m.category }}</td>
+                            <td>{{ m.linked_entries }}</td>
+                        </tr>
+                        {% endfor %}
+                        <tr id="no-results-mat" style="display:none">
+                            <td colspan="4">Nessun materiale corrisponde alla ricerca.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="sub">Nessun materiale. Importa una BOM: le MDF vengono cercate automaticamente.</p>
+        {% endif %}
+
+        <h2>Collegamenti componente → materiale</h2>
+        {% if links %}
+            <div class="tbl-wrap">
+                <table id="links-table">
+                    <thead>
+                        <tr>
+                            <th>Device</th>
+                            <th>Ref. Des.</th>
+                            <th>Value</th>
+                            <th>Materiale</th>
+                            <th>CAS RN</th>
+                            <th>Massa (mg)</th>
+                            <th>Codice</th>
+                            <th>Rivenditori</th>
+                            <th>Fonte MDF</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for l in links %}
+                        <tr>
+                            <td>{{ l.brand }} {{ l.model_name }}</td>
+                            <td>{{ l.reference_designator }}</td>
+                            <td>{{ l.part_value }}</td>
+                            <td>{{ l.material_name }}</td>
+                            <td>{{ l.casrn or '—' }}</td>
+                            <td>{{ l.mass_mg }}</td>
+                            <td class="mpn">{{ l.manufacturer_order_code or '—' }}</td>
+                            <td class="links">
+                                {% if l._links %}
+                                    {% for link in l._links %}
+                                        <a href="{{ link.url }}" target="_blank" rel="noopener">{{ link.name }}</a>
+                                    {% endfor %}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td>{{ l.source_mdf or '—' }}</td>
+                        </tr>
+                        {% endfor %}
+                        <tr id="no-results-links" style="display:none">
+                            <td colspan="9">Nessun collegamento corrisponde alla ricerca.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="sub">Nessun link materiale↔componente.</p>
+        {% endif %}
+    </div>
+
+    <script>
+        function findRows(selector) {
+            return document.querySelectorAll(selector + ' tbody tr');
+        }
+        function filterTables() {
+            var q = document.getElementById('mat-search').value.trim().toLowerCase();
+            var configs = [
+                ['#mat-table', 'no-results-mat'],
+                ['#links-table', 'no-results-links'],
+            ];
+            var total = 0, any = 0;
+            configs.forEach(function (cfg) {
+                var rows = findRows(cfg[0]);
+                var shown = 0;
+                var hasRows = false;
+                rows.forEach(function (tr) {
+                    if (tr.id === cfg[1]) return;
+                    hasRows = true;
+                    var ok = !q || tr.textContent.toLowerCase().indexOf(q) !== -1;
+                    tr.style.display = ok ? '' : 'none';
+                    if (ok) shown++;
+                });
+                var noRow = document.getElementById(cfg[1]);
+                if (noRow) noRow.style.display = (hasRows && !shown) ? '' : 'none';
+                total += rows.length - 1;
+                any += shown;
+            });
+            document.getElementById('match-count').textContent =
+                !q || any === total ? '' : any + ' righe mostrate';
+        }
+    </script>
 </body>
 </html>

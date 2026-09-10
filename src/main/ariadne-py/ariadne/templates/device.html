@@ -3,57 +3,120 @@
 <head>
     <meta charset="utf-8">
     <title>Ariadne — {{ device.model_name }}</title>
-    <style>
-        body { font-family: sans-serif; margin: 2rem; }
-        nav a { margin-right: 1rem; }
-        table { border-collapse: collapse; width: 100%; }
-        th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
-        th { background: #f0f0f0; }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <nav>
-        <a href="{{ url_for('index') }}">Home</a>
-        <a href="{{ url_for('import_bom') }}">Import BOM</a>
-        <a href="{{ url_for('mdf_import') }}">Import MDF</a>
-        <a href="{{ url_for('materials') }}">Materiali</a>
-        <a href="{{ url_for('export_device', device_id=device.id) }}">Esporta Excel</a>
-    </nav>
-    <h1>{{ device.brand }} {{ device.model_name }}</h1>
-    <p><strong>Produttore:</strong> {{ device.manufacturer }} · <strong>Anno:</strong> {{ device.year_of_production or '—' }}</p>
-    <p><strong>Componenti:</strong> {{ entries|length }}</p>
+    <header>
+        <div class="header-inner">
+            <h1>Ariadne<small>{{ device.brand }} {{ device.model_name }}</small></h1>
+            <nav>
+                <a href="{{ url_for('index') }}">Home</a>
+                <a href="{{ url_for('import_bom') }}">Import BOM</a>
+                <a href="{{ url_for('materials') }}">Materiali</a>
+            </nav>
+        </div>
+    </header>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% for category, message in messages %}
-            <p class="{{ category }}">{{ message }}</p>
-        {% endfor %}
-    {% endwith %}
+    <div class="wrap">
+        <div class="card">
+            <p style="margin:0">
+                <strong>Produttore:</strong> {{ device.manufacturer }}
+                · <strong>Anno:</strong> {{ device.year_of_production or '—' }}
+                · <strong>Componenti:</strong> {{ entries|length }}
+                {% if device.notes %}<br><span class="text-muted">{{ device.notes }}</span>{% endif %}
+            </p>
+            <p style="margin:.6rem 0 0; display:flex; gap:.5rem; flex-wrap:wrap">
+                <a class="btn ghost" href="{{ url_for('device_edit', device_id=device.id) }}">Modifica device</a>
+                <a class="btn ghost" href="{{ url_for('export_device', device_id=device.id) }}">Esporta Excel</a>
+                <form class="inline" method="post" action="{{ url_for('device_delete', device_id=device.id) }}"
+                      onsubmit="return confirm('Eliminare definitivamente {{ device.model_name }} e tutti i suoi componenti?')">
+                    <button type="submit" class="btn danger">Elimina device</button>
+                </form>
+            </p>
+        </div>
 
-    <table>
-        <tr>
-            <th>#</th>
-            <th>Ref. Des.</th>
-            <th>Qty</th>
-            <th>Valore</th>
-            <th>Package</th>
-            <th>Produttore</th>
-            <th>Codice</th>
-            <th>Montaggio</th>
-            <th>EEC</th>
-        </tr>
-        {% for e in entries %}
-        <tr>
-            <td>{{ e.item_number }}</td>
-            <td>{{ e.reference_designator }}</td>
-            <td>{{ e.quantity }}</td>
-            <td>{{ e.part_value }}</td>
-            <td>{{ e.package }}</td>
-            <td>{{ e.manufacturer }}</td>
-            <td>{{ e.manufacturer_order_code }}</td>
-            <td>{{ e.mounting_type }}</td>
-            <td>{{ e._eec_name }}</td>
-        </tr>
-        {% endfor %}
-    </table>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash {{ 'ok' if category == 'success' else 'err' }}">
+                        {{ message }}
+                        <button type="button" onclick="this.parentElement.remove()" title="Chiudi">&times;</button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="search-box">
+            <input type="search" id="device-search" autocomplete="off"
+                   placeholder="Cerca ref, valore, package, MPN, produttore, EEC…"
+                   oninput="filterRows()">
+            <span class="count" id="match-count"></span>
+        </div>
+
+        <div class="tbl-wrap">
+            <table id="device-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Ref. Des.</th>
+                        <th>Qty</th>
+                        <th>Valore</th>
+                        <th>Package</th>
+                        <th>Produttore</th>
+                        <th>Codice</th>
+                        <th>Rivenditori</th>
+                        <th>Montaggio</th>
+                        <th>EEC</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in entries %}
+                    <tr>
+                        <td>{{ e.item_number }}</td>
+                        <td>{{ e.reference_designator }}</td>
+                        <td>{{ e.quantity }}</td>
+                        <td>{{ e.part_value }}</td>
+                        <td>{{ e.package }}</td>
+                        <td>{{ e.manufacturer }}</td>
+                        <td class="mpn">{{ e.manufacturer_order_code or '—' }}</td>
+                        <td class="links">
+                            {% if e._links %}
+                                {% for l in e._links %}
+                                    <a href="{{ l.url }}" target="_blank" rel="noopener">{{ l.name }}</a>
+                                {% endfor %}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                        <td>{{ e.mounting_type }}</td>
+                        <td>{{ e._eec_name }}</td>
+                        <td><a class="btn ghost small" href="{{ url_for('entry_edit', entry_id=e.id) }}">Modifica</a></td>
+                    </tr>
+                    {% endfor %}
+                    <tr id="no-results" style="display:none">
+                        <td colspan="11">Nessun componente corrisponde alla ricerca.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function filterRows() {
+            var q = document.getElementById('device-search').value.trim().toLowerCase();
+            var rows = document.querySelectorAll('#device-table tbody tr');
+            var shown = 0;
+            rows.forEach(function (tr) {
+                if (tr.id === 'no-results') return;
+                var ok = !q || tr.textContent.toLowerCase().indexOf(q) !== -1;
+                tr.style.display = ok ? '' : 'none';
+                if (ok) shown++;
+            });
+            document.getElementById('match-count').textContent =
+                shown === rows.length - 1 ? '' : shown + ' componenti mostrati';
+            document.getElementById('no-results').style.display = shown ? 'none' : '';
+        }
+    </script>
 </body>
 </html>

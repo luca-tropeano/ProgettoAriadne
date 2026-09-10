@@ -53,6 +53,7 @@ class AppConfig:
     sftp: SFTPConfig = field(default_factory=SFTPConfig)
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
     mongo: MongoConfig = field(default_factory=MongoConfig)
+    auto_mdf: bool = False
 
     @classmethod
     def from_env(cls) -> AppConfig:
@@ -83,6 +84,7 @@ class AppConfig:
                 database=os.getenv("MONGO_DATABASE", "ariadne_raw"),
                 collection=os.getenv("MONGO_COLLECTION", "bom_files"),
             ),
+            auto_mdf=_as_bool(os.getenv("MDF_AUTO", "true")),
         )
 
 

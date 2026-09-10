@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="utf-8">
+    <title>Ariadne — Modifica {{ device.model_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="header-inner">
+            <h1>Ariadne<small>Modifica device #{{ device.id }}</small></h1>
+            <nav>
+                <a href="{{ url_for('index') }}">Home</a>
+                <a href="{{ url_for('import_bom') }}">Import BOM</a>
+                <a href="{{ url_for('materials') }}">Materiali</a>
+                <a href="{{ url_for('device_detail', device_id=device.id) }}">← Torna al device</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="wrap">
+        <div class="card" style="max-width:560px">
+            <h2>Modifica device {{ device.id }}</h2>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="flash {{ 'ok' if category == 'success' else 'err' }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="post">
+                <div class="field"><label class="req" for="brand">Brand</label>
+                    <input id="brand" name="brand" required value="{{ device.brand }}"></div>
+                <div class="field"><label class="req" for="model">Modello</label>
+                    <input id="model" name="model" required value="{{ device.model_name }}"></div>
+                <div class="field"><label class="req" for="manufacturer">Produttore</label>
+                    <input id="manufacturer" name="manufacturer" required value="{{ device.manufacturer }}"></div>
+                <div class="field"><label for="year">Anno</label>
+                    <input id="year" name="year" type="number" min="1900" max="2030"
+                           value="{{ device.year_of_production or '' }}"></div>
+                <div class="field"><label for="notes">Note</label>
+                    <textarea id="notes" name="notes" rows="3">{{ device.notes or '' }}</textarea></div>
+                <button type="submit" class="btn">Salva</button>
+                <a class="btn ghost" href="{{ url_for('device_detail', device_id=device.id) }}">Annulla</a>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

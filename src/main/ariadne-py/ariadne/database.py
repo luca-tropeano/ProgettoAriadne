@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import sqlite3
 from pathlib import Path
 
@@ -59,9 +60,29 @@ CREATE TABLE IF NOT EXISTS component_material (
 """
 
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _resolve_db_path(url: str) -> str:
+    """Rimedio il path SQLite: i path relativi partono dalla cartella package
+    (non dalla CWD, che cambia a seconda di dove si lancia il processo) e
+    la directory padre viene creata se manca."""
+    sqlite_prefix = "sqlite:///"
+    if not url.startswith(sqlite_prefix):
+        return url
+    path = url[len(sqlite_prefix):]
+    if path == ":memory:":
+        return path
+    p = Path(path)
+    if not p.is_absolute():
+        p = PROJECT_ROOT / p
+    p.parent.mkdir(parents=True, exist_ok=True)
+    return str(p)
+
+
 class Database:
     def __init__(self, config: DatabaseConfig):
-        db_path = config.url.replace("sqlite:///", "")
+        db_path = _resolve_db_path(config.url)
         self._conn = sqlite3.connect(db_path)
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA foreign_keys = ON")
@@ -125,12 +146,26 @@ class Database:
         ).fetchone()
         return dict(row) if row else None
 
+    def get_device_by_model(self, model_name: str) -> dict | None:
+        row = self._conn.execute(
+            "SELECT * FROM device WHERE model_name = ?",
+            (model_name,),
+        ).fetchone()
+        return dict(row) if row else None
+
     def get_bom_entries(self, device_id: int) -> list[dict]:
         rows = self._conn.execute(
             "SELECT * FROM bom_entry WHERE device_id = ? ORDER BY item_number",
             (device_id,),
         ).fetchall()
         return [dict(r) for r in rows]
+
+    def get_bom_entry_by_id(self, entry_id: int) -> dict | None:
+        row = self._conn.execute(
+            "SELECT * FROM bom_entry WHERE id = ?",
+            (entry_id,),
+        ).fetchone()
+        return dict(row) if row else None
 
     def find_bom_entry_by_ref(self, device_id: int, reference: str) -> dict | None:
         """Trova una BOMEntry del device che contiene il reference (anche in un gruppo)."""
@@ -140,8 +175,8 @@ class Database:
         for row in self._conn.execute(
             "SELECT * FROM bom_entry WHERE device_id = ?", (device_id,)
         ):
-            des = row["reference_designator"]
-            parts = [d.strip() for d in des.split(",")]
+            des = row["reference_designator"] or ""
+            parts = [d for d in re.split(r"[\s,]+", des) if d]
             if des == reference or reference in parts:
                 return dict(row)
         return None
@@ -191,6 +226,25 @@ class Database:
         ).fetchone()
         return row["id"] if row else None
 
+    def annotate_bom_entry(self, entry_id: int, text: str) -> None:
+        """Aggiunge testo alle note di una BOMEntry (idempotente per contenuto)."""
+        text = (text or "").strip()
+        if not text:
+            return
+        row = self._conn.execute(
+            "SELECT id, notes FROM bom_entry WHERE id = ?", (entry_id,)
+        ).fetchone()
+        if row is None:
+            return
+        notes = (row["notes"] or "").strip()
+        if text in notes:
+            return
+        new_notes = f"{notes}\n{text}".strip()
+        self._conn.execute(
+            "UPDATE bom_entry SET notes = ? WHERE id = ?", (new_notes, entry_id)
+        )
+        self._conn.commit()
+
     def link_material(
         self,
         bom_entry_id: int,
@@ -230,12 +284,14 @@ class Database:
         """Link materiale↔BOMEntry (per device se indicato), per la UI/demo.
 
         Ogni riga: material_name, casrn, category, mass_mg, note, source_mdf,
-        bom_entry_id, reference_designator, part_value, device model/brand.
+        bom_entry_id, reference_designator, part_value, manufacturer (e MPN/supplier
+        order code per i link ai rivenditori), device model/brand.
         """
         sql = (
             "SELECT cm.id AS link_id, cm.bom_entry_id, cm.mass_mg, cm.note, cm.source_mdf, "
             "m.material_name, m.casrn, m.category, "
             "be.reference_designator, be.part_value, be.manufacturer, "
+            "be.manufacturer_order_code, be.supplier_order_code, "
             "d.model_name, d.brand "
             "FROM component_material cm "
             "JOIN material m ON m.id = cm.material_id "
@@ -253,6 +309,63 @@ class Database:
     def get_all_devices(self) -> list[dict]:
         rows = self._conn.execute("SELECT * FROM device ORDER BY model_name").fetchall()
         return [dict(r) for r in rows]
+
+    def update_device(
+        self,
+        device_id: int,
+        brand: str | None = None,
+        model_name: str | None = None,
+        manufacturer: str | None = None,
+        year_of_production: int | None = None,
+        notes: str | None = None,
+    ) -> bool:
+        """Aggiorna i campi di un device. Ritorna False se l'id non esiste."""
+        cur = self._conn.execute(
+            "UPDATE device SET brand=?, model_name=?, manufacturer=?, "
+            "year_of_production=?, notes=? WHERE id=?",
+            (
+                brand if brand is not None else "",
+                model_name if model_name is not None else "",
+                manufacturer if manufacturer is not None else "",
+                year_of_production,
+                notes if notes is not None else "",
+                device_id,
+            ),
+        )
+        self._conn.commit()
+        return cur.rowcount > 0
+
+    def delete_device(self, device_id: int) -> bool:
+        """Elimina un device con tutte le sue BOMEntry e i link materiali.
+        Ritorna False se l'id non esiste."""
+        if not self.get_device_by_id(device_id):
+            return False
+        self._conn.execute(
+            "DELETE FROM component_material WHERE bom_entry_id IN "
+            "(SELECT id FROM bom_entry WHERE device_id = ?)",
+            (device_id,),
+        )
+        self._conn.execute("DELETE FROM bom_entry WHERE device_id = ?", (device_id,))
+        self._conn.execute("DELETE FROM device WHERE id = ?", (device_id,))
+        self._conn.commit()
+        return True
+
+    _ENTRY_FIELDS = (
+        "item_number", "quantity", "reference_designator", "part_value",
+        "package", "manufacturer", "manufacturer_order_code", "supplier",
+        "supplier_order_code", "notes", "mounting_type",
+    )
+
+    def update_bom_entry(self, entry_id: int, **fields) -> bool:
+        """Aggiorna i campi modificabili di una BOMEntry. Ritorna False se inesistente."""
+        updates = {k: v for k, v in fields.items() if k in self._ENTRY_FIELDS}
+        if not updates:
+            return False
+        sets = ", ".join(f"{k} = ?" for k in updates)
+        params = tuple(updates.values()) + (entry_id,)
+        cur = self._conn.execute(f"UPDATE bom_entry SET {sets} WHERE id = ?", params)
+        self._conn.commit()
+        return cur.rowcount > 0
 
     def get_stats(self) -> dict:
         devices = self._conn.execute("SELECT COUNT(*) as c FROM device").fetchone()["c"]

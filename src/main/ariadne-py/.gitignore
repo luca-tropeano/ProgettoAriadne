@@ -8,6 +8,11 @@ demo.db
 # Fixture MDF PDF pubbliche (ZVEI / KEMET-YAGEO) versionate per demo e test
 !test_data/mdf_zvei_mlcc_example.pdf
 !test_data/mdf_kemet_c4ak_film.pdf
+# Material Composition Declaration per-famiglia YAGEO (versione demo/test)
+!test_data/mdf/
+!test_data/mdf/*.pdf
+# Download grezzi dei MDF (duplicati non versionati; la copia canonica è test_data/mdf/)
+mdf_prospecting/downloaded/
 .env
 .coverage
 htmlcov/

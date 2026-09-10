@@ -24,10 +24,14 @@ def cli(ctx):
 @click.option("--model", default="", help="Device model name")
 @click.option("--manufacturer", default="", help="Device manufacturer")
 @click.option("--year", default=0, type=int, help="Year of production")
+@click.option("--no-auto-mdf", is_flag=True,
+              help="Disabilita il sourcing MDF automatico dopo l'import")
 @click.pass_context
-def process(ctx, file_path: str, brand: str, model: str, manufacturer: str, year: int):
+def process(ctx, file_path: str, brand: str, model: str, manufacturer: str, year: int, no_auto_mdf: bool):
     """Process a BOM file (Excel or PDF)."""
     config = ctx.obj["config"]
+    if no_auto_mdf:
+        config.auto_mdf = False
     device = Device(
         brand=brand,
         model_name=model,

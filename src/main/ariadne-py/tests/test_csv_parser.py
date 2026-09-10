@@ -27,6 +27,22 @@ def test_split_designators_quoted():
     assert _split_designators('"U1"') == "U1"
 
 
+def test_split_designators_expands_range():
+    assert _split_designators("C1-C10") == "C1,C2,C3,C4,C5,C6,C7,C8,C9,C10"
+    assert _split_designators("U10-U12") == "U10,U11,U12"
+
+
+def test_split_designators_keeps_non_ranges():
+    # senza due estremi 'prefisso+cifre' identici -> token invariato
+    assert _split_designators("USB-2") == "USB-2"
+    assert _split_designators("TP-5V") == "TP-5V"
+    assert _split_designators("C1-X2") == "C1-X2"
+
+
+def test_split_designators_mixed_range_and_single():
+    assert _split_designators("C1-C3, R1") == "C1,C2,C3,R1"
+
+
 def test_detect_mounting_smd_prefix():
     assert _detect_mounting_type("SMD_0603") == "SMT"
     assert _detect_mounting_type("QFP32", None) == "SMT"

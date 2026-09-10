@@ -111,6 +111,18 @@ def test_find_bom_entry_by_ref_group(db):
     assert db.find_bom_entry_by_ref(did, "  ") is None
 
 
+def test_find_bom_entry_by_ref_group_spaces(db):
+    did = _seed_device(db)
+    db.insert_bom_entry(
+        did,
+        BOMEntry(item_number=9, quantity=3, reference_designator="C8 C22 C26", mounting_type="SMT"),
+    )
+    assert db.find_bom_entry_by_ref(did, "C22")["reference_designator"] == "C8 C22 C26"
+    assert db.find_bom_entry_by_ref(did, "C8")["reference_designator"] == "C8 C22 C26"
+    assert db.find_bom_entry_by_ref(did, "C26")["reference_designator"] == "C8 C22 C26"
+    assert db.find_bom_entry_by_ref(did, "C9") is None
+
+
 def test_ingest_json_creates_and_links(db, tmp_path):
     _seed_device(db)
     payload = {

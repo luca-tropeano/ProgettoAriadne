@@ -6,10 +6,10 @@ import tempfile
 import pytest
 
 from ariadne.config import DatabaseConfig
-from ariadne.database import Database
+from ariadne.database import Database, _resolve_db_path
 from ariadne.eec import classify_all, classify_designator, eec_name
 from ariadne.export import export_device_to_excel
-from ariadne.models import BOMEntry, Device
+from ariadne.models import BOMEntry, Device, Material
 
 
 def _db():
@@ -26,6 +26,27 @@ def _entry(**kw) -> BOMEntry:
     defaults = dict(item_number=1, quantity=1, reference_designator="R1")
     defaults.update(kw)
     return BOMEntry(**defaults)
+
+
+class TestDBPathResolution:
+    def test_absolute_path_kept(self, tmp_path):
+        assert _resolve_db_path(f"sqlite:///{tmp_path / 'x.db'}") == str(tmp_path / "x.db")
+
+    def test_memory_kept(self):
+        assert _resolve_db_path("sqlite:///:memory:") == ":memory:"
+
+    def test_relative_resolves_to_package_dir(self, tmp_path, monkeypatch):
+        # lancia con CWD altrove: il path relativo NON deve dipendere dalla CWD
+        monkeypatch.chdir(tmp_path)
+        resolved = _resolve_db_path("sqlite:///rel_check.db")
+        assert resolved == os.path.join(__import__("ariadne.database", fromlist=["PROJECT_ROOT"]).PROJECT_ROOT, "rel_check.db")
+
+    def test_creates_missing_parent_dir(self, monkeypatch):
+        import ariadne.database as dbmod
+        monkeypatch.setattr(dbmod, "PROJECT_ROOT", tempfile.mkdtemp())
+        resolved = dbmod._resolve_db_path("sqlite:///sub/dir_creato/test.db")
+        assert os.path.isdir(os.path.dirname(resolved))
+        assert resolved.endswith(os.path.join("sub", "dir_creato", "test.db"))
 
 
 class TestDuplicateCheck:
@@ -118,6 +139,56 @@ class TestEECClassification:
     def test_eec_name(self):
         assert eec_name(1) == "Resistors"
         assert eec_name(99) == "Other"
+
+
+class TestDeviceUpdate:
+    def test_update_changes_fields(self):
+        db, path = _db()
+        try:
+            did = _device(db, "ORIG")
+            assert db.update_device(did, brand="B2", model_name="NUOVO",
+                                    manufacturer="M2", year_of_production=2025,
+                                    notes="n")
+            dev = db.get_device_by_id(did)
+            assert dev["model_name"] == "NUOVO"
+            assert dev["brand"] == "B2"
+            assert dev["year_of_production"] == 2025
+            assert dev["notes"] == "n"
+        finally:
+            db.close()
+            os.unlink(path)
+
+    def test_update_missing_id_returns_false(self):
+        db, path = _db()
+        try:
+            assert db.update_device(4242, model_name="X") is False
+        finally:
+            db.close()
+            os.unlink(path)
+
+
+class TestDeviceDelete:
+    def test_delete_removes_device_entries_and_links(self):
+        db, path = _db()
+        try:
+            did = _device(db)
+            eid = db.insert_bom_entry(did, _entry(reference_designator="R1"))
+            mid = db.insert_material(Material(material_name="lead", category="element"))
+            db.link_material(eid, mid)
+            assert db.delete_device(did) is True
+            assert db.get_device_by_id(did) is None
+            assert db.get_bom_entries(did) == []
+        finally:
+            db.close()
+            os.unlink(path)
+
+    def test_delete_missing_id_returns_false(self):
+        db, path = _db()
+        try:
+            assert db.delete_device(4242) is False
+        finally:
+            db.close()
+            os.unlink(path)
 
 
 class TestExport:

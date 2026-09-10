@@ -9,6 +9,7 @@ from ariadne.excel_parser import parse_excel_bom
 from ariadne.csv_parser import parse_csv_bom
 from ariadne.eec import classify_all
 from ariadne.ibom_parser import parse_ibom_bom
+from ariadne.md_parser import parse_md_bom
 from ariadne.mongo_store import RawDataStore
 from ariadne.models import Device, ImportResult
 from ariadne.ods_parser import parse_ods_bom
@@ -52,6 +53,8 @@ class Orchestrator:
             return self._process_pdf(file_path, device)
         elif ext in (".html", ".htm"):
             return self._process_ibom(file_path, device)
+        elif ext in (".md", ".markdown"):
+            return self._process_md(file_path, device)
         else:
             result = ImportResult()
             result.errors.append(f"Unsupported format: {ext}")
@@ -77,6 +80,8 @@ class Orchestrator:
             elif ext == ".pdf":
                 return extract_text_from_pdf(file_path)
             elif ext in (".html", ".htm"):
+                return Path(file_path).read_text(encoding="utf-8", errors="replace")
+            elif ext in (".md", ".markdown"):
                 return Path(file_path).read_text(encoding="utf-8", errors="replace")
             elif ext in (".xml", ".json"):
                 return Path(file_path).read_text(encoding="utf-8", errors="replace")
@@ -128,6 +133,15 @@ class Orchestrator:
         if not entries:
             result = ImportResult()
             result.errors.append("No components found in IBOM file")
+            result.success = False
+            return result
+        return self._import_entries(entries, device)
+
+    def _process_md(self, file_path: str, device: Device) -> ImportResult:
+        entries = parse_md_bom(file_path)
+        if not entries:
+            result = ImportResult()
+            result.errors.append("No components found in Markdown file")
             result.success = False
             return result
         return self._import_entries(entries, device)
@@ -197,7 +211,28 @@ class Orchestrator:
                 )
 
         result.success = result.failed_rows == 0
+        if result.success and self._config.auto_mdf:
+            self._auto_source_mdf(device, result)
         return result
+
+    def _auto_source_mdf(self, device: Device, result: ImportResult) -> None:
+        """Sourcing MDF automatico: family MCD linkate + riferimenti conformità."""
+        try:
+            from ariadne.mdf_auto import auto_source_mdf
+
+            auto = auto_source_mdf(self._db, device.model_name)
+        except Exception as e:  # il sourcing non deve bloccare l'import della BOM
+            result.warnings.append(f"MDF auto fallito: {e}")
+            return
+        if not (auto.family_groups or auto.reference_components or auto.links_created):
+            return
+        result.warnings.append(
+            "MDF auto: "
+            f"{auto.family_groups} gruppi da family MCD ({auto.links_created} link "
+            f"materials da {', '.join(auto.files) or '-'}), "
+            f"{auto.reference_components} con pagina conformità produttore, "
+            f"{auto.no_mpn_components} senza MPN"
+        )
 
     def get_stats(self) -> dict:
         stats = self._db.get_stats()
@@ -242,3 +277,31 @@ class Orchestrator:
         self._ai.close()
         self._raw.close()
         self._db.close()
+
+    def parse_entries(self, file_path: str) -> list:
+        """Estrae i componenti di una BOM senza scrivere nel DB.
+
+        Serve per confrontare la BOM in ingresso con quella già presente
+        (recap differenze). Ritorna lista di ``BOMEntry`` (vuota se non
+        parzialmente estraibile, es. PDF senza AI).
+        """
+        ext = Path(file_path).suffix.lower()
+        if ext in (".xlsx", ".xls"):
+            return parse_excel_bom(file_path)
+        if ext == ".ods":
+            return parse_ods_bom(file_path)
+        if ext == ".csv":
+            return parse_csv_bom(file_path)
+        if ext == ".pdf":
+            text = extract_text_from_pdf(file_path)
+            return parse_pdf_bom_text(text) if text.strip() else []
+        if ext in (".html", ".htm"):
+            return parse_ibom_bom(file_path)
+        if ext in (".md", ".markdown"):
+            return parse_md_bom(file_path)
+        return []
+
+    @staticmethod
+    def entries_to_dicts(entries: list[BOMEntry]) -> list[dict]:
+        """Converte BOMEntry (pydantic) in dict per il confronto BOM."""
+        return [e.model_dump() for e in entries]

@@ -1,0 +1,1639 @@
+{
+  "device_model": "STEVAL-SPIN3204",
+  "materials": [
+    {
+      "material_name": "BaTiO3",
+      "casrn": "12047-27-7",
+      "category": "element"
+    },
+    {
+      "material_name": "Ni",
+      "casrn": "7440-02-0",
+      "category": "element"
+    },
+    {
+      "material_name": "Cu",
+      "casrn": "7440-50-8",
+      "category": "element"
+    },
+    {
+      "material_name": "Sn",
+      "casrn": "7440-31-5",
+      "category": "element"
+    },
+    {
+      "material_name": "Ag",
+      "casrn": "7440-22-4",
+      "category": "element"
+    },
+    {
+      "material_name": "CaZrO3",
+      "casrn": "12013-47-7",
+      "category": "element"
+    }
+  ],
+  "links": [
+    {
+      "reference_designator": "C22",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C22",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C22",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C22",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C22",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C22",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C23",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C23",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C23",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C23",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C23",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C23",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C24",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C24",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C24",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C24",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C24",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C24",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C35",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C35",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C35",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C35",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C35",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C35",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C36",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C36",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C36",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C36",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C36",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C36",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C15",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C15",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C15",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C15",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C15",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C15",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C21",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C21",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C21",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C21",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C21",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C21",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C12",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C12",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C12",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C12",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C12",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C12",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C13",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C13",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C13",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C13",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C13",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C13",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C19",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C19",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C19",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C19",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C19",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C19",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C32",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C32",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C32",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C32",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C32",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C32",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C1",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C1",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C1",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C1",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C1",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C1",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C11",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C11",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C11",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C11",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C11",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C11",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C20",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C20",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C20",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C20",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C20",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C20",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C26",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C26",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C26",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C26",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C26",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C26",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C27",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C27",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C27",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C27",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C27",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C27",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C28",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C28",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C28",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C28",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C28",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C28",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C29",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C29",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C29",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C29",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C29",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C29",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C33",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C33",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C33",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C33",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C33",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C33",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C34",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C34",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C34",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C34",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C34",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C34",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C37",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C37",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C37",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C37",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C37",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C37",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C5",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C5",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C5",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C5",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C5",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C5",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C7",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C7",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C7",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C7",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C7",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C7",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C8",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C8",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C8",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C8",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C8",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C8",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C9",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C9",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C9",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C9",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C9",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C9",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C30",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C30",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C30",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C30",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C30",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C30",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C31",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C31",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C31",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C31",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C31",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C31",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C45",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C45",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C45",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C45",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C45",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C45",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C6",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C6",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C6",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C6",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C6",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C6",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C14",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C14",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C14",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C14",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C14",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C14",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C18",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C18",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C18",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C18",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C18",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C18",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C42",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C42",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C42",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C42",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C42",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C42",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C43",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C43",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C43",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C43",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C43",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C43",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C44",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C44",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C44",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C44",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C44",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C44",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C25",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C25",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C25",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C25",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C25",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C25",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C3",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C3",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C3",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C3",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C3",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C3",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C40",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C40",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C40",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C40",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C40",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C40",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C41",
+      "material_name": "BaTiO3",
+      "mass_mg": 5.36,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C41",
+      "material_name": "Ni",
+      "mass_mg": 0.944,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C41",
+      "material_name": "Cu",
+      "mass_mg": 0.57,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C41",
+      "material_name": "Sn",
+      "mass_mg": 0.344,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C41",
+      "material_name": "Ag",
+      "mass_mg": 0.21,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    },
+    {
+      "reference_designator": "C41",
+      "material_name": "CaZrO3",
+      "mass_mg": 4.02,
+      "note": "MCD per-serie YAGEO MLCC/X7R-C0G (Material Composition Declaration)",
+      "source_mdf": "MCD-Ceramic.pdf"
+    }
+  ],
+  "meta": {
+    "generated_from": "test_data/mdf/MCD-Ceramic.pdf",
+    "source": "https://yageogroup.com/content/Resource%20Library/Material%20Declaration/MCD-Ceramic.pdf",
+    "coverage": "KEMET/YAGEO MLCC SMD (X7R/X5R/C0G)",
+    "note": "dichiarazione di famiglia: la massa si riferisce a un componente rappresentativo, non al singolo part"
+  }
+}
